@@ -183,31 +183,37 @@ print( 'INFO: Starting program...' )
 # Parse command-line arguments
 s_usage = 'usage: %prog [options] stimulus-file'
 arg_parser = ArgumentParser()
-opt_parser = OptionParser(
-        usage = s_usage
-        )
+#opt_parser = OptionParser(
+#        usage = s_usage
+#        )
 
 arg_parser.add_argument(
-        'stimulus-file',
-        type = str,
-        dest = 's_stim_file_path',
+        'stimulus_file_path',
         help = 'Pathname of stimulus file to read'
         )
-opt_parser.add_option(
-        '-o',
-        '--output',
-        action = 'store',
-        type = str,
-        dest = 's_vcd_file_path',
-        default = '',
-        help = 'Pathname of file to print VCD to',
-        metavar = 'FILE'
-        )
+#opt_parser.add_option(
+#        '-o',
+#        '--output',
+#        action = 'store',
+#        type = str,
+#        dest = 's_vcd_file_path',
+#        default = '',
+#        help = 'Pathname of file to print VCD to',
+#        metavar = 'FILE'
+#        )
 
-( arg_names, arg_values ) = arg_parser.parse_args()
-( opt_names, opt_values ) = opt_parser.parse_args()
+s_args = arg_parser.parse_args()
+#( opt_names, opt_values ) = opt_parser.parse_args()
 
-sys.exit( 0 )
+s_stim_file_path = s_args.stimulus_file_path
+n_stim_file_base_end_pos = s_stim_file_path.find( '.sim_out' )
+
+if( n_stim_file_base_end_pos == -1 ):
+    print 'ERROR: Incorrect file type'
+    sys.exit( -1 )
+
+s_vcd_file_path = s_stim_file_path[ : n_stim_file_base_end_pos ]
+s_vcd_file_path = s_vcd_file_path + '.vcd'
 
 
 # Open simulation output file
