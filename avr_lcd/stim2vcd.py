@@ -31,8 +31,8 @@ s_vcd_lines = []
 # Interconnect System's Wave program does not work
 #   with timescales other than '1'
 # Need to multiply base time unit to get true scale
-s_timescale = '1 ns'
-n_time_multiplier = 125
+s_timescale = '1 us'
+n_time_multiplier = 1
 
 # Elapsed simulation time
 n_cur_time = 0
