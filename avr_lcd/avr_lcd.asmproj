@@ -18,7 +18,8 @@
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
-    <OverrideVtorValue>exception_table</OverrideVtorValue>
+    <OverrideVtorValue>
+    </OverrideVtorValue>
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <ProgFlashFromRam>true</ProgFlashFromRam>
     <RamSnippetAddress>0x20000000</RamSnippetAddress>
@@ -44,14 +45,14 @@
       <ToolName>Simulator</ToolName>
       <ToolNumber>
       </ToolNumber>
-      <StimuliFile>C:\Users\Allen\Documents\Atmel Studio\6.1\avr_lcd\avr_lcd\avr_lcd.stim</StimuliFile>
+      <StimuliFile>C:\Users\Allen\Documents\EE Lab\Projects\avr_lcd\avr_lcd\avr_lcd.stim</StimuliFile>
       <Channel>
         <host>127.0.0.1</host>
-        <port>50631</port>
+        <port>51744</port>
         <ssl>False</ssl>
       </Channel>
     </com_atmel_avrdbg_tool_simulator>
-    <StimuliFile>C:\Users\Allen\Documents\Atmel Studio\6.1\avr_lcd\avr_lcd\avr_lcd.stim</StimuliFile>
+    <StimuliFile>C:\Users\Allen\Documents\EE Lab\Projects\avr_lcd\avr_lcd\avr_lcd.stim</StimuliFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
