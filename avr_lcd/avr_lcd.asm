@@ -8,18 +8,20 @@
 
 // BEGIN CONSTANTS
 
+
 // Delay constants
 .SET        WAIT_128US = 1
 .SET        WAIT_5MS =  78
 .SET        WAIT_15MS =	234
 
-// Control line definitions (within Port B)
+// Control line definitions (for Port B)
 .SET		CNTRL =		PORTB
 .SET		RW =		PORTB0
 .SET		RS =		PORTB1
 .SET		E =			PORTB2
+.SET        LCD_FAIL =  PORTB3
 
-// Data line definitions (within Port C)
+// Data line definitions (for Port C)
 .SET		DATA =		PORTC
 .SET		DB4 =		PORTC0
 .SET		DB5 =		PORTC1
@@ -52,14 +54,16 @@ RESET:
 // Setup Port B
 CONFIG_PORTB:
 
-	// Set pins 0,1, and 2 of Port B to output
-	LDI		R16,0x07
+	// Set low nibble of Port B to output
+    // All outputs are initially low
+	LDI		R16,0x0F
 	OUT		DDRB,R16
 
 // Setup Port C
 CONFIG_PORTC:
 
-	// Set pins 0, 1, 2, and 3 of Port C to output
+	// Set low nibble of Port C to output
+    // All outputs are initially low
 	LDI		R16,0x0F
 	OUT		DDRC,R16
 
@@ -89,10 +93,7 @@ CONFIG_T1:
 	CLR		R16             // Clear R16
 	ST		X,R16           // Clear TIMSK0
 
-MAIN:
-
-	// Default Enable to low value
-	CBI		CNTRL,E
+CONFIG_LCD:
 
 	// Delay for >15ms after power-up
 	LDI		R25,WAIT_15MS
@@ -124,15 +125,74 @@ MAIN:
 	CALL	WAIT
 
 	// Function set #1
+FUNC_SET_1:
+
+    LDI     R23,0X20        // Function set: 4-bit bus width
+    CBR     R25,2           // Wait on BF
+    LDI     R24,WAIT_5MS    // Time-out after 5 ms
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    FUNC_SET_2      // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
 	// Function set #2
+FUNC_SET_2:
+
+    // Function set:
+    //  4-bit bus width
+    //  2-line display
+    //  5x8 dot character resolution
+    LDI     R23,0X28
+
+    CBR     R25,1           // Disable 4-bit setup mode
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    LCD_OFF         // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
 	// Display off
+LCD_OFF:
+    LDI     R23,0X08
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    LCD_CLEAR       // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
 	// Display clear
+LCD_CLEAR:
+    LDI     R23,0X01
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    LCD_ENTRY       // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
-	// Entry mode set
+	// Entry mode set:
+    //  Increment cursor
+    //  Shift display
+LCD_ENTRY:
+    LDI     R23,0X07
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    LCD_ENTRY       // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
+    // Turn on LCD:
+    //  Cursor on
+    //  Cursor blinking
+LCD_ON:
+    LDI     R23,0X0F
+    CALL    WRITE_CMD
+    SBRS    R25,3           // Check time-out flag
+    RJMP    LCD_CLEAR       // If cleared, proceed to next stage
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
+
+MAIN:
 
 	RJMP	MAIN    // Loop back to MAIN
 

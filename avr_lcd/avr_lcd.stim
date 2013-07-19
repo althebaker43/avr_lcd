@@ -1,7 +1,5 @@
 $log PORTB
 $log PORTC
-$log DDRB
-$log DDRC
 $startlog avr_lcd.sim_out
 
 #100000
