@@ -1,0 +1,180 @@
+v 20110115 2
+B 0 300 3300 1000 3 0 0 0 -1 -1 0 -1 -1 -1 -1 -1
+T 1000 1100 9 10 1 0 0 0 1
+LCD
+P 200 100 200 300 1 0 0
+{
+T 200 100 5 10 0 0 180 0 1
+pintype=output
+T 200 355 5 10 1 1 90 0 1
+pinlabel=VSS
+T 150 205 5 10 1 1 90 6 1
+pinnumber=1
+T 200 100 5 10 0 0 180 0 1
+pinseq=0
+}
+P 400 100 400 300 1 0 0
+{
+T 400 100 5 10 0 0 180 0 1
+pintype=output
+T 400 355 5 10 1 1 90 0 1
+pinlabel=VDD
+T 350 205 5 10 1 1 90 6 1
+pinnumber=2
+T 400 100 5 10 0 0 180 0 1
+pinseq=0
+}
+P 600 100 600 300 1 0 0
+{
+T 600 100 5 10 0 0 180 0 1
+pintype=unknown
+T 600 355 5 10 1 1 90 0 1
+pinlabel=V0
+T 550 205 5 10 1 1 90 6 1
+pinnumber=3
+T 600 100 5 10 0 0 180 0 1
+pinseq=0
+}
+P 800 100 800 300 1 0 0
+{
+T 800 100 5 10 0 0 180 0 1
+pintype=unknown
+T 800 355 5 10 1 1 90 0 1
+pinlabel=RS
+T 750 205 5 10 1 1 90 6 1
+pinnumber=4
+T 800 100 5 10 0 0 180 0 1
+pinseq=0
+}
+P 1000 100 1000 300 1 0 0
+{
+T 1000 100 5 10 0 0 0 0 1
+pintype=unknown
+T 1000 355 5 10 1 1 90 0 1
+pinlabel=RW
+T 950 205 5 10 1 1 90 6 1
+pinnumber=5
+T 1000 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1200 100 1200 300 1 0 0
+{
+T 1200 100 5 10 0 0 0 0 1
+pintype=unknown
+T 1200 355 5 10 1 1 90 0 1
+pinlabel=E
+T 1150 205 5 10 1 1 90 6 1
+pinnumber=6
+T 1200 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1400 100 1400 300 1 0 0
+{
+T 1400 100 5 10 0 0 0 0 1
+pintype=unknown
+T 1400 355 5 10 1 1 90 0 1
+pinlabel=DB0
+T 1350 205 5 10 1 1 90 6 1
+pinnumber=7
+T 1400 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1600 100 1600 300 1 0 0
+{
+T 1600 100 5 10 0 0 0 0 1
+pintype=unknown
+T 1600 355 5 10 1 1 90 0 1
+pinlabel=DB1
+T 1550 205 5 10 1 1 90 6 1
+pinnumber=8
+T 1600 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 1800 100 1800 300 1 0 0
+{
+T 1800 100 5 10 0 0 0 0 1
+pintype=unknown
+T 1800 355 5 10 1 1 90 0 1
+pinlabel=DB2
+T 1750 205 5 10 1 1 90 6 1
+pinnumber=9
+T 1800 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 2000 100 2000 300 1 0 0
+{
+T 2000 100 5 10 0 0 0 0 1
+pintype=unknown
+T 2000 355 5 10 1 1 90 0 1
+pinlabel=DB3
+T 1950 205 5 10 1 1 90 6 1
+pinnumber=10
+T 2000 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 2200 100 2200 300 1 0 0
+{
+T 2200 100 5 10 0 0 0 0 1
+pintype=unknown
+T 2200 355 5 10 1 1 90 0 1
+pinlabel=DB4
+T 2150 205 5 10 1 1 90 6 1
+pinnumber=11
+T 2200 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 2400 100 2400 300 1 0 0
+{
+T 2400 100 5 10 0 0 0 0 1
+pintype=unknown
+T 2400 355 5 10 1 1 90 0 1
+pinlabel=DB5
+T 2350 205 5 10 1 1 90 6 1
+pinnumber=12
+T 2400 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 2600 100 2600 300 1 0 0
+{
+T 2600 100 5 10 0 0 0 0 1
+pintype=unknown
+T 2600 355 5 10 1 1 90 0 1
+pinlabel=DB6
+T 2550 205 5 10 1 1 90 6 1
+pinnumber=13
+T 2600 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 2800 100 2800 300 1 0 0
+{
+T 2800 100 5 10 0 0 0 0 1
+pintype=unknown
+T 2800 355 5 10 1 1 90 0 1
+pinlabel=DB7
+T 2750 205 5 10 1 1 90 6 1
+pinnumber=14
+T 2800 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 3000 100 3000 300 1 0 0
+{
+T 3000 100 5 10 0 0 0 0 1
+pintype=unknown
+T 3000 355 5 10 1 1 90 0 1
+pinlabel=LED+
+T 2950 205 5 10 1 1 90 6 1
+pinnumber=15
+T 3000 100 5 10 0 0 0 0 1
+pinseq=0
+}
+P 3200 100 3200 300 1 0 0
+{
+T 3200 100 5 10 0 0 0 0 1
+pintype=unknown
+T 3200 355 5 10 1 1 90 0 1
+pinlabel=LED-
+T 3150 205 5 10 1 1 90 6 1
+pinnumber=16
+T 3200 100 5 10 0 0 0 0 1
+pinseq=0
+}
