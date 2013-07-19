@@ -99,7 +99,7 @@ MAIN:
 	CALL	WAIT
 
 	// Output wakeup #1
-    LDI     R23,0X03    // Function set: 8-bit bus width (not really)
+    LDI     R23,0X30    // Function set: 8-bit bus width (not really)
     CBR     R25,0       // 4-bit bus width
     SBR     R25,1       // 4-bit setup mode
     SBR     R25,2       // Do not wait on BF
@@ -191,10 +191,11 @@ WRITE_CMD_4BIT:
     LDI     R16,0X0F
     OUT     DDRC,R16
 
-    // Drive output pins low
     // Enable pull-ups on input pins
     SWAP    R16
-    OUT     PORTC,R16
+    IN      R17,DATA
+    OR      R17,R16
+    OUT     DATA,R17
 
     CBI     CNTRL,RW    // Clear Read/Write
     CBI     CNTRL,RS    // Clear Register Select
@@ -206,10 +207,10 @@ WRITE_CMD_4BIT:
     OUT     DATA,R16
 
     // Pulse Enable to send
-    CBI     CNTRL,E
     SBI     CNTRL,E
+    CBI     CNTRL,E
 
-    SBRC    R25,2   // Check 4-bit setup mode flag
+    SBRC    R25,1   // Check 4-bit setup mode flag
     RET             // If set, return from WRITE_CMD
 
     // Move low byte of command to output port
@@ -218,8 +219,8 @@ WRITE_CMD_4BIT:
     OUT     DATA,R16
 
     // Pulse Enable to send
-    CBI     CNTRL,E
     SBI     CNTRL,E
+    CBI     CNTRL,E
 
     RET // Return from WRITE_CMD
 
