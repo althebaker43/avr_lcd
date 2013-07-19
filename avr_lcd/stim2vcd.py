@@ -127,7 +127,7 @@ class VCD_Var:
 
         else:
 
-            s_cur_dump_line = 'x'
+            s_cur_dump_line = '0'
 
         s_cur_dump_line = s_cur_dump_line + self.s_id + '\n'
         s_dump_lines.append( s_cur_dump_line )
@@ -328,5 +328,10 @@ vcd_file = open(
         )
 vcd_file.writelines( s_vcd_lines )
 vcd_file.close()
+
+# Delete simulation output file to avoid concatenation
+#   with next simulation's output
+print( 'INFO: Deleting %s' % s_stim_file_path )
+os.remove( s_stim_file_path )
 
 print( 'INFO: End of program' )
