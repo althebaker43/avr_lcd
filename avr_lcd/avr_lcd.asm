@@ -6,6 +6,8 @@
  */
 
 
+// BEGIN CONSTANTS
+
 // Delay constants
 .SET        WAIT_128US = 1
 .SET        WAIT_5MS =  78
@@ -26,10 +28,16 @@
 .SET		BF =		PORTC3 
 
 
+// END CONSTANTS
+
+
 // Set Reset Interrupt vector
 .ORG		0x0000
 	
 	RJMP	RESET
+
+
+// BEGIN MAIN PROGRAM
 
 
 .ORG		0x0034
@@ -41,80 +49,78 @@ RESET:
 	OUT		SPL,R16
 	OUT		SPH,R17
 
-
 // Setup Port B
-CONFIG_PB:
+CONFIG_PORTB:
 
 	// Set pins 0,1, and 2 of Port B to output
 	LDI		R16,0x07
 	OUT		DDRB,R16
 
-
 // Setup Port C
-CONFIG_PC:
+CONFIG_PORTC:
 
 	// Set pins 0, 1, 2, and 3 of Port C to output
 	LDI		R16,0x0F
 	OUT		DDRC,R16
 
-
 // Configure Timer 0
 CONFIG_T1:
     
     // Disable power reduction for Timer 0
-    LDI     XL,LOW(PRR)
-    LDI     XH,HIGH(PRR)
-    LD      R16,X
-    OUT     GPIOR0,R16
-    CBI     GPIOR0,PRTIM0
-    IN      R16,GPIOR0
-    ST      X,R16
+    // PRR: Power Reduction Register
+    LDI     XL,LOW(PRR)     // Move low byte of PRR into XL
+    LDI     XH,HIGH(PRR)    // Move high byte of PRR into XH
+    LD      R16,X           // Load PRR contents into R16
+    CBR     R16,PRTIM0      // Clear Timer 0 bit
+    ST      X,R16           // Store new flags into PRR
 
 	// Disconnect ports 
 	// Disable waveform generation
 	// Set clock source to internal I/O clock
 	// Prescaler set to divide freq. by 64
-    CLR     R16
-    OUT     TCCR0A,R16
-    LDI     R16,0X03
-    OUT     TCCR0B,R16
+    CLR     R16         // Clear R16
+    OUT     TCCR0A,R16  // Clear TCCR0A
+    LDI     R16,0X03    // Set [0] and [1] in R16
+    OUT     TCCR0B,R16  // Set [0] and [1] in TCCR0B
 
 	// Disable all Timer 0 interrupts
-	LDI		XL,LOW(TIMSK0)
-	LDI		XH,HIGH(TIMSK0)
-	CLR		R16
-	ST		X,R16
+	LDI		XL,LOW(TIMSK0)  // Load low byte of TIMSK0 address into XL
+	LDI		XH,HIGH(TIMSK0) // Load high byte of TIMSK0 address into XH
+	CLR		R16             // Clear R16
+	ST		X,R16           // Clear TIMSK0
 
-
-// START OF MAIN PROGRAM
 MAIN:
 
-	// Lower Enable
+	// Default Enable to low value
 	CBI		CNTRL,E
 
-	// Delay for >15ms
-	LDI		R16,WAIT_15MS
+	// Delay for >15ms after power-up
+	LDI		R25,WAIT_15MS
 	CALL	WAIT
 
 	// Output wakeup #1
-	CALL	WAKEUP
+    LDI     R23,0X03    // Function set: 8-bit bus width (not really)
+    CBR     R25,0       // 4-bit bus width
+    SBR     R25,1       // 4-bit setup mode
+    SBR     R25,2       // Do not wait on BF
+	CALL	WRITE_CMD
 
 	// Delay for >5ms
-	LDI		R16,WAIT_5MS
+	LDI		R24,WAIT_5MS
 	CALL	WAIT
 
 	// Output wakeup #2
-	CALL	WAKEUP
+	CALL	WRITE_CMD
 
 	// Delay for >100us
-	LDI		R16,WAIT_128US
+	LDI		R24,WAIT_128US
 	CALL	WAIT
 
 	// Output wakeup #3
-	CALL	WAKEUP
+	CALL	WRITE_CMD
 
 	// Delay for >100us
-	LDI		R16,WAIT_128US
+	LDI		R24,WAIT_128US
 	CALL	WAIT
 
 	// Function set #1
@@ -128,34 +134,36 @@ MAIN:
 	// Entry mode set
 
 
-	RJMP	MAIN
+	RJMP	MAIN    // Loop back to MAIN
+
 
 // END OF MAIN PROGRAM
 
 // BEGIN FUNCTIONS
 
+
 // Name: WRITE_CMD
 // Descr: Writes a command to the LCD display
 // Inputs:
-//  R14 - Command to write
-//  R15[0] - Bus width (0 = 4-bit, 1 = 8-bit)
-//  R15[1] - 4-bit setup mode? (0 = no, 1 = yes)
-//  R15[2] - Wait on Busy Flag? (0 = yes, 1 = no)
-//  R25 - Time-out value
+//  R23 - Command to write
+//  R24 - Time-out value
+//  R25[0] - Bus width (ignored for now) (0 = 4-bit, 1 = 8-bit)
+//  R25[1] - 4-bit setup mode? (0 = no, 1 = yes)
+//  R25[2] - Wait on Busy Flag? (0 = yes, 1 = no)
 // Outputs:
-//  R15[2] - Time-out occurred (0 = no, 1 = yes)
+//  R25[3] - Time-out occurred (0 = no, 1 = yes)
 WRITE_CMD:
 
     // If requested, wait on BF
-    SBIS    R15,2               // Check wait-busy argument
+    SBRS    R25,2               // Check wait-busy argument
     RJMP    WRITE_CMD_DWIDTH    // If set, jump to WRITE_CMD_DWIDTH
     CALL    WAIT_BUSY           // Else, call WAIT_BUSY
-    SBIC    R15,3               // Check WAIT_BUSY return value
+    SBRC    R25,3               // Check WAIT_BUSY return value
     RET                         // If set, return from WRITE_CMD
 
 WRITE_CMD_DWIDTH:
 
-    SBIS    R15,0           // Check bus width indicator
+    //SBRS    R25,0           // Check bus width indicator
     RJMP    WRITE_CMD_4BIT  // If set, jump to 4-bit write
 
 WRITE_CMD_8BIT:
@@ -168,8 +176,7 @@ WRITE_CMD_8BIT:
     CBI     CNTRL,RS    // Select Instruction Register
 
     // Move command to output port
-    MOV     R16,R14
-    OUT     DATA,R16
+    OUT     DATA,R23
 
     // Pulse Enable to send
     SBI     CNTRL,E
@@ -189,31 +196,30 @@ WRITE_CMD_4BIT:
     SWAP    R16
     OUT     PORTC,R16
 
-    CBI     CTRL,RW // Clear Read/Write
-    CBI     CTRL,RS // Clear Register Select
+    CBI     CNTRL,RW    // Clear Read/Write
+    CBI     CNTRL,RS    // Clear Register Select
 
     // Move high byte of command to output port
-    SWAP    R14
-    MOV     R16,R14
+    MOV     R16,R23
+    SWAP    R16
     ORI     R16,0XF0    // Keep pull-ups enabled on input pins
     OUT     DATA,R16
 
     // Pulse Enable to send
-    CBI     CTRL,E
-    SBI     CTRL,E
+    CBI     CNTRL,E
+    SBI     CNTRL,E
 
-    SBIC    R15,2   // Check 4-bit setup mode flag
+    SBRC    R25,2   // Check 4-bit setup mode flag
     RET             // If set, return from WRITE_CMD
 
     // Move low byte of command to output port
-    SWAP    R14
-    MOV     R16,R14
+    MOV     R16,R23
     ORI     R16,0XF0    // Keep pull-ups enabled on input pins
     OUT     DATA,R16
 
     // Pulse Enable to send
-    CBI     CTRL,E
-    SBI     CTRL,E
+    CBI     CNTRL,E
+    SBI     CNTRL,E
 
     RET // Return from WRITE_CMD
 
@@ -221,42 +227,29 @@ WRITE_CMD_4BIT:
 // Name: WAIT_BUSY
 // Descr: Wait for busy flag
 // Inputs:
-//  R25 - Timeout value
+//  R24 - Timeout value
 // Output:
-//  R15[3] - Return value (0 = ready, 1 = timed-out)
+//  R25[3] - Return value (0 = ready, 1 = timed-out)
 WAIT_BUSY:
-
-	// Set data pins to input
-	LDI     R16,0X0F
-	OUT		DDRC,R16
 	
-    CBI     R15,3   // Set return value to ready
+    CBR     R25,3   // Set return value to ready
 
-    OUT     OCR0A,R25   // Store interval constant in output compare register
+    OUT     OCR0A,R24   // Store interval constant in output compare register
 	SBI		TIFR0,OCF0A // Clear output compare flag
-    OUT     TCNT0,R17   // Reset Timer 1
-
-    CALL    READ_STATUS // Read busy flag from LCD
+    CLR     R16         // Clear R16
+    OUT     TCNT0,R17   // Reset Timer 0
 
 READ_BUSY:
 
-    // If BF cleared, branch to happy end
-	SBIS	DATA,BF
-	RJMP	WAIT_BF_GOOD
+    CALL    READ_STATUS // Read busy flag from LCD
 
-    // Else if timeout, branch to fail end
-    SBIS    TIFR0,OCF0A
-    RJMP    READ_BUSY
+	SBRS	R25,3           // Check busy flag
+	RJMP	WAIT_BUSY_END     // If cleared, branch to end
 
-WAIT_BF_FAIL:
+    SBIS    TIFR0,OCF0A     // Check timer compare flag
+    RJMP    READ_BUSY       // If cleared, loop back
 
-    LDI     R2,0XFF // Set return value to fail
-
-WAIT_BF_GOOD:
-
-	// Set Port C back to output
-	LDI		R16,0x0F
-	OUT		DDRC,R16
+WAIT_BUSY_END:
 
 	RET // Return from WAIT_BUSY
 
@@ -268,27 +261,26 @@ WAIT_BF_GOOD:
 //  Address Counter output register
 // Inputs:
 // Outputs:
-//  R15[4]: Busy flag (0 = ready, 1 = busy)
-//  R13[6:0]: Address counter contents
+//  R25[3]: Busy flag (0 = ready, 1 = busy)
+//  R22[6:0]: Address counter contents
 READ_STATUS:
 
     // Set data pins to input
     LDI     R16,0X0F
     OUT     DDRC,R16
 
-    SBI     R15,4       // Default Busy indicator to busy
+    SBR     R25,3       // Default Busy indicator to busy
 
     SBI     CNTRL,RW    // Read operation
     CBI     CNTRL,RS    // Select Instruction Register
 
     // Get high nibble of address counter
 	SBI		CNTRL,E     // Raise Enable
-    IN      R16,DATA    // Copy input pin values
+    IN      R22,DATA    // Copy input pin values
 	CBI		CNTRL,E     // Lower Enable
     
-    MOV     R13,R14     // Move values to output register
-    SWAP    R13         // Swap nibbles in output register
-    ANDI    R13,0XF0    // Clear lower nibble
+    SWAP    R22         // Swap nibbles in output register
+    ANDI    R22,0XF0    // Clear lower nibble
 
     // Get low nibble of address counter
 	SBI		CNTRL,E     // Raise Enable
@@ -296,11 +288,11 @@ READ_STATUS:
     CBI		CNTRL,E     // Lower Enable
 
     ANDI    R16,0X0F    // Isolate low nibble
-    OR      R13,R16     // Move low nibble to output register
+    OR      R22,R16     // Move low nibble to output register
 
-    SBIS    R13,7       // Check Busy Flag
-    CBI     R15,4       // If cleared, output ready
-    CBI     R13,7       // Always clear flag in address counter output
+    SBRS    R22,7       // Check Busy Flag
+    CBR     R25,3       // If cleared, output ready
+    CBR     R22,7       // Always clear flag in address counter output
 
     RET // Return from READ_STATUS
 
@@ -308,16 +300,16 @@ READ_STATUS:
 // Name: WAIT
 // Descr: Wait for given amount of time
 // Inputs:
-//  R16: Interval constant
+//  R24: Interval constant
 WAIT:
 	
 	// Store interval constant in output compare register
-    OUT     OCR0A,R16
+    OUT     OCR0A,R24
 
 	// Clear output compare flag
 	SBI		TIFR0,OCF0A
 
-	// Reset Timer 1
+	// Reset Timer 0
 	CLR		R16
     OUT     TCNT0,R16
 
@@ -329,3 +321,6 @@ WAIT_T0:
 
 	// Return
 	RET
+
+
+// END FUNCTIONS
