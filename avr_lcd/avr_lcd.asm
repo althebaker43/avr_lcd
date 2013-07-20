@@ -75,7 +75,7 @@ CONFIG_T1:
     LDI     XL,LOW(PRR)     // Move low byte of PRR into XL
     LDI     XH,HIGH(PRR)    // Move high byte of PRR into XH
     LD      R16,X           // Load PRR contents into R16
-    CBR     R16,PRTIM0      // Clear Timer 0 bit
+    CBR     R16,0X20        // Clear Timer 0 bit
     ST      X,R16           // Store new flags into PRR
 
 	// Disconnect ports 
@@ -101,9 +101,9 @@ CONFIG_LCD:
 
 	// Output wakeup #1
     LDI     R23,0X30    // Function set: 8-bit bus width (not really)
-    CBR     R25,0       // 4-bit bus width
-    SBR     R25,1       // 4-bit setup mode
-    SBR     R25,2       // Do not wait on BF
+    CBR     R25,0X01    // 4-bit bus width
+    SBR     R25,0X02    // 4-bit setup mode
+    SBR     R25,0X04    // Do not wait on BF
 	CALL	WRITE_CMD
 
 	// Delay for >5ms
@@ -128,7 +128,7 @@ CONFIG_LCD:
 FUNC_SET_1:
 
     LDI     R23,0X20        // Function set: 4-bit bus width
-    CBR     R25,2           // Wait on BF
+    CBR     R25,0X04        // Wait on BF
     LDI     R24,WAIT_5MS    // Time-out after 5 ms
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
@@ -145,7 +145,7 @@ FUNC_SET_2:
     //  5x8 dot character resolution
     LDI     R23,0X28
 
-    CBR     R25,1           // Disable 4-bit setup mode
+    CBR     R25,0X02        // Disable 4-bit setup mode
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
     RJMP    LCD_OFF         // If cleared, proceed to next stage
@@ -215,7 +215,7 @@ MAIN:
 WRITE_CMD:
 
     // If requested, wait on BF
-    SBRS    R25,2               // Check wait-busy argument
+    SBRC    R25,2               // Check wait-busy argument
     RJMP    WRITE_CMD_DWIDTH    // If set, jump to WRITE_CMD_DWIDTH
     CALL    WAIT_BUSY           // Else, call WAIT_BUSY
     SBRC    R25,3               // Check WAIT_BUSY return value
@@ -241,6 +241,10 @@ WRITE_CMD_8BIT:
     // Pulse Enable to send
     SBI     CNTRL,E
     CBI     CNTRL,E
+
+    // Drive data pins low
+    CLR     R16
+    OUT     DATA,R16
 
     RET // Return from WRITE_CMD
 
@@ -282,6 +286,10 @@ WRITE_CMD_4BIT:
     SBI     CNTRL,E
     CBI     CNTRL,E
 
+    // Drive data pins low
+    LDI     R16,0XF0
+    OUT     DATA,R16
+
     RET // Return from WRITE_CMD
 
 
@@ -293,22 +301,23 @@ WRITE_CMD_4BIT:
 //  R25[3] - Return value (0 = ready, 1 = timed-out)
 WAIT_BUSY:
 	
-    CBR     R25,3   // Set return value to ready
+    CBR     R25,0X08        // Set return value to ready
 
-    OUT     OCR0A,R24   // Store interval constant in output compare register
-	SBI		TIFR0,OCF0A // Clear output compare flag
-    CLR     R16         // Clear R16
-    OUT     TCNT0,R17   // Reset Timer 0
+    OUT     OCR0A,R24       // Store interval constant in output compare register
+	SBI		TIFR0,OCF0A     // Clear output compare flag
+    CLR     R16             // Clear R16
+    OUT     TCNT0,R17       // Reset Timer 0
 
 READ_BUSY:
 
-    CALL    READ_STATUS // Read busy flag from LCD
+    CALL    READ_STATUS     // Read busy flag from LCD
 
 	SBRS	R25,3           // Check busy flag
-	RJMP	WAIT_BUSY_END     // If cleared, branch to end
+	RJMP	WAIT_BUSY_END   // If cleared, branch to end
 
     SBIS    TIFR0,OCF0A     // Check timer compare flag
     RJMP    READ_BUSY       // If cleared, loop back
+    SBR     R25,0X08        // Else, set return value to timed-out
 
 WAIT_BUSY_END:
 
@@ -321,21 +330,24 @@ WAIT_BUSY_END:
 // Note: Busy Flag will always be cleared from 
 //  Address Counter output register
 // Inputs:
+//  R25[1]: 4-bit setup mode? (0 = no, 1 = yes)
 // Outputs:
 //  R25[3]: Busy flag (0 = ready, 1 = busy)
 //  R22[6:0]: Address counter contents
 READ_STATUS:
 
-    // Set data pins to input
-    LDI     R16,0X0F
+    // Set data pins to input (pull-ups disabled)
+    CLR     R16
     OUT     DDRC,R16
 
-    SBR     R25,3       // Default Busy indicator to busy
+    SBR     R25,0X40    // Default Busy indicator to busy
 
     SBI     CNTRL,RW    // Read operation
     CBI     CNTRL,RS    // Select Instruction Register
 
     // Get high nibble of address counter
+READ_STATUS_HI:
+
 	SBI		CNTRL,E     // Raise Enable
     IN      R22,DATA    // Copy input pin values
 	CBI		CNTRL,E     // Lower Enable
@@ -343,7 +355,12 @@ READ_STATUS:
     SWAP    R22         // Swap nibbles in output register
     ANDI    R22,0XF0    // Clear lower nibble
 
+    SBRC    R25,1           // Check 4-bit setup mode flag
+    RJMP    READ_STATUS_END // If cleared, proceed to READ_STATUS_LOW
+
     // Get low nibble of address counter
+READ_STATUS_LOW:
+
 	SBI		CNTRL,E     // Raise Enable
     IN      R16,DATA    // Copy intput pin values
     CBI		CNTRL,E     // Lower Enable
@@ -351,9 +368,11 @@ READ_STATUS:
     ANDI    R16,0X0F    // Isolate low nibble
     OR      R22,R16     // Move low nibble to output register
 
+READ_STATUS_END:
+
     SBRS    R22,7       // Check Busy Flag
-    CBR     R25,3       // If cleared, output ready
-    CBR     R22,7       // Always clear flag in address counter output
+    CBR     R25,0X08    // If cleared, output ready
+    CBR     R22,0X80    // Always clear flag in address counter output
 
     RET // Return from READ_STATUS
 
