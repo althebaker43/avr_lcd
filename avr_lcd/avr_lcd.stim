@@ -6,7 +6,7 @@ $startlog avr_lcd.sim_out
 
 PORTC = 0X08
 
-#1000
+#10000
 
 $stoplog
 $break

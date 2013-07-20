@@ -274,8 +274,8 @@ WRITE_CMD_4BIT:
     SBI     CNTRL,E
     CBI     CNTRL,E
 
-    SBRC    R25,1   // Check 4-bit setup mode flag
-    RET             // If set, return from WRITE_CMD
+    SBRC    R25,1           // Check 4-bit setup mode flag
+    RJMP    WRITE_CMD_END   // If set, jump to WRITE_CMD_END
 
     // Move low byte of command to output port
     MOV     R16,R23
@@ -285,6 +285,8 @@ WRITE_CMD_4BIT:
     // Pulse Enable to send
     SBI     CNTRL,E
     CBI     CNTRL,E
+
+WRITE_CMD_END:
 
     // Drive data pins low
     LDI     R16,0XF0
@@ -340,7 +342,7 @@ READ_STATUS:
     CLR     R16
     OUT     DDRC,R16
 
-    SBR     R25,0X40    // Default Busy indicator to busy
+    SBR     R25,0X08    // Default Busy indicator to busy
 
     SBI     CNTRL,RW    // Read operation
     CBI     CNTRL,RS    // Select Instruction Register
