@@ -10,7 +10,9 @@
 
 
 // Delay constants
+.SET        WAIT_64US = 0
 .SET        WAIT_128US = 1
+.SET        WAIT_2MS = 31
 .SET        WAIT_5MS =  78
 .SET        WAIT_15MS =	234
 
@@ -68,7 +70,7 @@ CONFIG_PORTC:
 	OUT		DDRC,R16
 
 // Configure Timer 0
-CONFIG_T1:
+CONFIG_T0:
     
     // Disable power reduction for Timer 0
     // PRR: Power Reduction Register
@@ -95,89 +97,81 @@ CONFIG_T1:
 
 CONFIG_LCD:
 
-	// Delay for >15ms after power-up
-	LDI		R25,WAIT_15MS
-	CALL	WAIT
+    // Drive all data lines low
+    LDI     R16,0XF0
+    OUT     DATA,R16
+    SWAP    R16
+    OUT     DDRC,R16
 
-	// Output wakeup #1
+    // Drive all control lines low (except for LCD_FAIL)
+    IN      R16,CNTRL
+    ANDI    R16,0XF8
+    OUT     CNTRL,R16
+
+	// Delay for >40ms after power-up
+    //  (busy flag unavailable)
+	LDI		R25,WAIT_15MS
+	CALL	WAIT    // 15 ms 
+	CALL	WAIT    // 30 ms
+	CALL	WAIT    // 45 ms
+
+	// Output wakeup
     LDI     R23,0X30    // Function set: 8-bit bus width (not really)
     CBR     R25,0X01    // 4-bit bus width
     SBR     R25,0X02    // 4-bit setup mode
-    SBR     R25,0X04    // Do not wait on BF
+    SBR     R25,0X04    // Do not wait on busy flag
 	CALL	WRITE_CMD
 
-	// Delay for >5ms
+	// Delay for >5ms (busy flag unavailable)
 	LDI		R24,WAIT_5MS
 	CALL	WAIT
 
-	// Output wakeup #2
-	CALL	WRITE_CMD
-
-	// Delay for >100us
-	LDI		R24,WAIT_128US
-	CALL	WAIT
-
-	// Output wakeup #3
-	CALL	WRITE_CMD
-
-	// Delay for >100us
-	LDI		R24,WAIT_128US
-	CALL	WAIT
-
-	// Function set #1
-FUNC_SET_1:
-
-    LDI     R23,0X20        // Function set: 4-bit bus width
-    CBR     R25,0X04        // Wait on BF
-    LDI     R24,WAIT_5MS    // Time-out after 5 ms
-    CALL    WRITE_CMD
-    SBRS    R25,3           // Check time-out flag
-    RJMP    FUNC_SET_2      // If cleared, proceed to next stage
-    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
-    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
-
-	// Function set #2
-FUNC_SET_2:
-
-    // Function set:
+    // Function set #1:
     //  4-bit bus width
     //  2-line display
     //  5x8 dot character resolution
     LDI     R23,0X28
+    CBR     R25,0X02    // Disable 4-bit setup mode
+	CALL	WRITE_CMD
 
-    CBR     R25,0X02        // Disable 4-bit setup mode
-    CALL    WRITE_CMD
-    SBRS    R25,3           // Check time-out flag
-    RJMP    LCD_OFF         // If cleared, proceed to next stage
-    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
-    RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
+	// Delay for >100us
+	LDI		R24,WAIT_128US
+	CALL	WAIT
+
+	// Output function set #2
+	CALL	WRITE_CMD
+
+	// Delay for >100us
+	CALL	WAIT
 
 	// Display off
 LCD_OFF:
-    LDI     R23,0X08
+    LDI     R23,0X08        // Display off command
+    CBR     R25,0X04        // Wait on BF
+    LDI     R24,WAIT_2MS    // Time out after 2 ms
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
     RJMP    LCD_CLEAR       // If cleared, proceed to next stage
-    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failure indicator
     RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
 	// Display clear
 LCD_CLEAR:
-    LDI     R23,0X01
+    LDI     R23,0X01        // Clear display command
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
     RJMP    LCD_ENTRY       // If cleared, proceed to next stage
-    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
+    SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failure indicator
     RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
 	// Entry mode set:
     //  Increment cursor
     //  Shift display
 LCD_ENTRY:
-    LDI     R23,0X07
+    LDI     R23,0X07        // Entry mode command
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
-    RJMP    LCD_ENTRY       // If cleared, proceed to next stage
+    RJMP    LCD_ON          // If cleared, proceed to next stage
     SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
     RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 
@@ -185,10 +179,10 @@ LCD_ENTRY:
     //  Cursor on
     //  Cursor blinking
 LCD_ON:
-    LDI     R23,0X0F
+    LDI     R23,0X0F        // Display on command
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
-    RJMP    LCD_CLEAR       // If cleared, proceed to next stage
+    RJMP    MAIN            // If cleared, proceed to next stage
     SBI     CNTRL,LCD_FAIL  // Else, turn on LCD setup failiure indicator
     RJMP    CONFIG_LCD      // Loop back to CONFIG_LCD
 

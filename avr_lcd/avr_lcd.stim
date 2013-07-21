@@ -1,12 +1,10 @@
 $log PORTB
 $log PORTC
+$log DDRB
+$log DDRC
 $startlog avr_lcd.sim_out
 
-#21816
-
-PORTC = 0X08
-
-#10000
+#100000
 
 $stoplog
 $break
