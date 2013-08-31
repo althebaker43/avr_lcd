@@ -383,13 +383,13 @@ WAIT:
     OUT     OCR0A,R24
 
 	// Clear output compare flag
-	SBI		TIFR0,OCF0A
+	SBI		TIFR0,OCF0A // Cleared by writing 1 to location
 
 	// Reset Timer 0
 	CLR		R16
     OUT     TCNT0,R16
 
-// Wait for Timer 0 output compare flag
+    // Wait for Timer 0 output compare flag
 WAIT_T0:
 
 	SBIS	TIFR0,OCF0A
