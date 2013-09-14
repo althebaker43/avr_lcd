@@ -168,7 +168,7 @@ LCD_CLEAR:
     //  Increment cursor
     //  Shift display
 LCD_ENTRY:
-    LDI     R23,0X07        // Entry mode command
+    LDI     R23,0X06        // Entry mode command
     CALL    WRITE_CMD
     SBRS    R25,3           // Check time-out flag
     RJMP    LCD_ON          // If cleared, proceed to next stage
