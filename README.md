@@ -44,10 +44,10 @@ If using the USBTiny AVR programmer from Adafruit, AVRDUDE is needed to communic
 
 An AVR can be programmed right from Atmel Studio by setting the USBTiny as an external tool. After installing WinAVR and setting up USBTiny for Windows, open up Atmel Studio and click on "Tools" > "External Tools..." to add a new external tool. Then fill out the following information (omit the quotes):
 
-Title: "USBTiny Debug"
-Command: Path to avrdude.exe (usually something like "C:\WinAVR-20100110\bin\avrdude.exe")
-Arguments: "-p m328p -c usbtiny -U flash:w:Debug/$(ItemFileName).hex"
-Initial Directory: "$(ProjectDir)"
+* Title: "USBTiny Debug"
+* Command: Path to avrdude.exe (usually something like "C:\WinAVR-20100110\bin\avrdude.exe")
+* Arguments: "-p m328p -c usbtiny -U flash:w:Debug/$(ItemFileName).hex"
+* Initial Directory: "$(ProjectDir)"
 
 Check the "Use Output window" checkbox so that you can verify that programming completes successfully.
 
@@ -57,10 +57,10 @@ Now, whenever you have the USBTiny connected to your computer and target board, 
 
 The stim2vcd Python script in the project directory can be used to convert output from the Atmel Studio simulator into a VCD file that can be examined in a VCD waveform viewer. This can also be set up as an external tool in Atmel Studio to simplify use. Click on "Tools" > "External Tools..." to add a new external tool, and fill out the following information (omit the quotes).
 
-Title: "stim2vcd"
-Command: Path to Python interpreter (usually something like "C:\Python27\python.exe")
-Arguments: "stim2vcd.py $(ItemFileName).sim_out"
-Initial Directory: "$(ProjectDir)
+* Title: "stim2vcd"
+* Command: Path to Python interpreter (usually something like "C:\Python27\python.exe")
+* Arguments: "stim2vcd.py $(ItemFileName).sim_out"
+* Initial Directory: "$(ProjectDir)
 
 Check the "Use Output window" checkbox so that you can verify that the script runs successfully.
 
