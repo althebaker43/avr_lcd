@@ -3,3 +3,16 @@
 *.swp
 *.pdf
 *.ps
+*.suo
+*.atsuo
+*.elf
+*.o
+*.png
+*.eps
+*.bak
+*.lst
+*.map
+*.hex
+*.bin
+*.srec
+avr_lcd/Debug/
