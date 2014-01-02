@@ -5,6 +5,7 @@
 PRG            = avr_lcd
 OBJ            = avr_lcd.o
 MCU_TARGET     = atmega328p
+SIM_TARGET     = atmega328
 OPTIMIZE       = -O2
 
 DEFS           =
@@ -16,7 +17,12 @@ CC             = avr-gcc
 
 # Override is only needed by avr-lib build system.
 
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
+ifdef SIM
+    override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(SIM_TARGET) $(DEFS)
+else
+    override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
+endif
+
 override LDFLAGS       = -Wl,-Map,$(PRG).map
 
 OBJCOPY        = avr-objcopy
@@ -25,6 +31,11 @@ OBJDUMP        = avr-objdump
 all: $(PRG).elf lst text eeprom
 
 $(PRG).elf: $(OBJ)
+ifdef SIM
+	echo "\nINFO: Generating simulation files.\n"
+else
+	echo "\nINFO: Generating hardware files.\n"
+endif
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # dependency:

@@ -172,135 +172,135 @@ CONFIG_LCD:
 
     ; Delay for >40ms after power-up
     LDI     R25,WAIT_15MS
-    CALL    WAIT    ; 15 ms 
-    CALL    WAIT    ; 30 ms
-    CALL    WAIT    ; 45 ms
+    RCALL   WAIT    ; 15 ms 
+    RCALL   WAIT    ; 30 ms
+    RCALL   WAIT    ; 45 ms
 
     ; Output wakeup #1
     LDI     R23,0X30    ; Function set: 8-bit bus width (not really)
     CBR     R25,0X01    ; 4-bit bus width
     SBR     R25,0X02    ; 4-bit setup mode
     SBR     R25,0X04    ; Do not wait on busy flag
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
     
     ; Delay for 5ms
     LDI     R24,WAIT_5MS
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Output wakeup #2
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
     
     ; Delay for 5ms
     LDI     R24,WAIT_5MS
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Output wakeup #3
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
     
     ; Delay for 320us
     LDI     R24,WAIT_320US
-    CALL    WAIT
+    RCALL   WAIT
 
     ; Function set #1:
     ;  4-bit bus width
     ;  2-line display
     ;  5x8 dot character resolution
     LDI     R23,0X28
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
 
     ; Delay for 128 us
     LDI     R24,WAIT_128US
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Output function set #2
     CBR     R25,0X02    ; Disable 4-bit setup mode
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
     
     ; Delay for 128 us
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Turn on LCD:
     ;  Cursor on
     ;  Cursor blinking
 LCD_ON:
     LDI     R23,0X0F        ; Display on command
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
     
     ; Delay for 128 us
     LDI     R24,WAIT_128US
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Display clear
 LCD_CLEAR:
     LDI     R23,0X01        ; Clear display command
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
 
     ; Delay for 2 ms
     LDI     R24,WAIT_2MS
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Entry mode set:
     ;  Increment cursor
     ;  Shift display
 LCD_ENTRY:
     LDI     R23,0X06        ; Entry mode command
-    CALL    WRITE_CMD
+    RCALL   WRITE_CMD
 
     ; Delay for 128 us
     LDI     R24,WAIT_128US
-    CALL    WAIT
+    RCALL   WAIT
     
     ; Write characters for "Hello, World!" to display
 LCD_WRITE:
     
     ; Write "H"
     LDI     R23,CH_H_UP
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "e"
     LDI     R23,CH_E_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "ll"
     LDI     R23,CH_L_LOW
-    CALL    WRITE_DATA
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "o"
     LDI     R23,CH_O_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write ","
     LDI     R23,CH_COMMA
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write " "
     LDI     R23,CH_SPACE
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "W"
     LDI     R23,CH_W_UP
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "o"
     LDI     R23,CH_O_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "r"
     LDI     R23,CH_R_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "l"
     LDI     R23,CH_L_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "d"
     LDI     R23,CH_D_LOW
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
     
     ; Write "!"
     LDI     R23,CH_EXCL
-    CALL    WRITE_DATA
+    RCALL   WRITE_DATA
 
 
 LOOP:
@@ -328,7 +328,7 @@ WRITE_CMD:
     ; If requested, wait on BF
     SBRC    R25,2               ; Check wait-busy argument
     RJMP    WRITE_CMD_DWIDTH    ; If set, jump to WRITE_CMD_DWIDTH
-    CALL    WAIT_BUSY           ; Else, call WAIT_BUSY
+    RCALL   WAIT_BUSY           ; Else, call WAIT_BUSY
     SBRC    R25,3               ; Check WAIT_BUSY return value
     RET                         ; If set, return from WRITE_CMD
 
@@ -451,7 +451,7 @@ WRITE_DATA:
 
     ; Wait for 128 us
     LDI     R24,WAIT_128US
-    CALL    WAIT
+    RCALL   WAIT
 
     RET ; Return from WRITE_DATA
 
@@ -474,7 +474,7 @@ WAIT_BUSY:
 
 READ_BUSY:
 
-    CALL    READ_STATUS     ; Read busy flag from LCD
+    RCALL   READ_STATUS     ; Read busy flag from LCD
 
     SBRS    R25,3           ; Check busy flag
     RJMP    WAIT_BUSY_END   ; If cleared, branch to end
