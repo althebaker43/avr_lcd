@@ -19,7 +19,7 @@
 .SET        WAIT_15MS,234
 
 ; Control line definitions (for Port B)
-.SET        CNTRL,_SFR_IO_ADDR(PORTB)
+.SET        CNTRL,PORTB
 .SET        RS,PORTB0
 .SET        RW,PORTB1
 .SET        E,PORTB2
@@ -121,7 +121,7 @@ main:
     ; Set low nibble of Port B to output
     ; All outputs are initially low
     LDI     R16,0x0F
-    OUT     DDRB,R16
+    OUT     _SFR_IO_ADDR(DDRB),R16
 
 ; Setup Port C
 CONFIG_PORTC:
@@ -129,7 +129,7 @@ CONFIG_PORTC:
     ; Set low nibble of Port C to output
     ; All outputs are initially low
     LDI     R16,0x0F
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
 ; Configure Timer 0
 CONFIG_T0:
@@ -161,14 +161,14 @@ CONFIG_LCD:
 
     ; Drive all data lines low
     LDI     R16,0XF0
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
     SWAP    R16
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
     ; Drive all control lines low (except for LCD_FAIL)
-    IN      R16,CNTRL
+    IN      R16,_SFR_IO_ADDR(CNTRL)
     ANDI    R16,0XF8
-    OUT     CNTRL,R16
+    OUT     _SFR_IO_ADDR(CNTRL),R16
 
     ; Delay for >40ms after power-up
     LDI     R25,WAIT_15MS
@@ -340,21 +340,21 @@ WRITE_CMD_8BIT:
     
     ; Set all pins on PORTC to output
     LDI     R16,0XFF
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
-    CBI     CNTRL,RW    ; Write operation
-    CBI     CNTRL,RS    ; Select Instruction Register
+    CBI     _SFR_IO_ADDR(CNTRL),RW    ; Write operation
+    CBI     _SFR_IO_ADDR(CNTRL),RS    ; Select Instruction Register
 
     ; Move command to output port
-    OUT     DATA,R23
+    OUT     _SFR_IO_ADDR(DATA),R23
 
     ; Pulse Enable to send
-    SBI     CNTRL,E
-    CBI     CNTRL,E
+    SBI     _SFR_IO_ADDR(CNTRL),E
+    CBI     _SFR_IO_ADDR(CNTRL),E
 
     ; Drive data pins low
     CLR     R16
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     RET ; Return from WRITE_CMD
 
@@ -363,26 +363,26 @@ WRITE_CMD_4BIT:
     ; Set first four pins on PORTC to output
     ; The rest are inputs
     LDI     R16,0X0F
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
     ; Enable pull-ups on input pins
     SWAP    R16
-    IN      R17,DATA
+    IN      R17,_SFR_IO_ADDR(DATA)
     OR      R17,R16
-    OUT     DATA,R17
+    OUT     _SFR_IO_ADDR(DATA),R17
 
-    CBI     CNTRL,RW    ; Clear Read/Write
-    CBI     CNTRL,RS    ; Clear Register Select
+    CBI     _SFR_IO_ADDR(CNTRL),RW    ; Clear Read/Write
+    CBI     _SFR_IO_ADDR(CNTRL),RS    ; Clear Register Select
 
     ; Move high byte of command to output port
     MOV     R16,R23
     SWAP    R16
     ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
-    SBI     CNTRL,E
-    CBI     CNTRL,E
+    SBI     _SFR_IO_ADDR(CNTRL),E
+    CBI     _SFR_IO_ADDR(CNTRL),E
 
     SBRC    R25,1           ; Check 4-bit setup mode flag
     RJMP    WRITE_CMD_END   ; If set, jump to WRITE_CMD_END
@@ -390,17 +390,17 @@ WRITE_CMD_4BIT:
     ; Move low byte of command to output port
     MOV     R16,R23
     ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
-    SBI     CNTRL,E
-    CBI     CNTRL,E
+    SBI     _SFR_IO_ADDR(CNTRL),E
+    CBI     _SFR_IO_ADDR(CNTRL),E
 
 WRITE_CMD_END:
 
     ; Drive data pins low
     LDI     R16,0XF0
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     RET ; Return from WRITE_CMD
 
@@ -415,39 +415,39 @@ WRITE_DATA:
     ; Set first four pins on PORTC to output
     ; The rest are inputs
     LDI     R16,0X0F
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
     ; Enable pull-ups on input pins
     SWAP    R16
-    IN      R17,DATA
+    IN      R17,_SFR_IO_ADDR(DATA)
     OR      R17,R16
-    OUT     DATA,R17
+    OUT     _SFR_IO_ADDR(DATA),R17
 
-    CBI     CNTRL,RW    ; Clear Read/Write
-    SBI     CNTRL,RS    ; Set Register Select
+    CBI     _SFR_IO_ADDR(CNTRL),RW    ; Clear Read/Write
+    SBI     _SFR_IO_ADDR(CNTRL),RS    ; Set Register Select
 
     ; Move high byte of data to output port
     MOV     R16,R23
     SWAP    R16
     ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
-    SBI     CNTRL,E
-    CBI     CNTRL,E
+    SBI     _SFR_IO_ADDR(CNTRL),E
+    CBI     _SFR_IO_ADDR(CNTRL),E
 
     ; Move low byte of command to output port
     MOV     R16,R23
     ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
-    SBI     CNTRL,E
-    CBI     CNTRL,E
+    SBI     _SFR_IO_ADDR(CNTRL),E
+    CBI     _SFR_IO_ADDR(CNTRL),E
 
     ; Drive data pins low
     LDI     R16,0XF0
-    OUT     DATA,R16
+    OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Wait for 128 us
     LDI     R24,WAIT_128US
@@ -502,19 +502,19 @@ READ_STATUS:
 
     ; Set data pins to input (pull-ups disabled)
     CLR     R16
-    OUT     DDRC,R16
+    OUT     _SFR_IO_ADDR(DDRC),R16
 
     SBR     R25,0X08    ; Default Busy indicator to busy
 
-    SBI     CNTRL,RW    ; Read operation
-    CBI     CNTRL,RS    ; Select Instruction Register
+    SBI     _SFR_IO_ADDR(CNTRL),RW    ; Read operation
+    CBI     _SFR_IO_ADDR(CNTRL),RS    ; Select Instruction Register
 
     ; Get high nibble of address counter
 READ_STATUS_HI:
 
-    SBI     CNTRL,E     ; Raise Enable
-    IN      R22,DATA    ; Copy input pin values
-    CBI     CNTRL,E     ; Lower Enable
+    SBI     _SFR_IO_ADDR(CNTRL),E     ; Raise Enable
+    IN      R22,_SFR_IO_ADDR(DATA)    ; Copy input pin values
+    CBI     _SFR_IO_ADDR(CNTRL),E     ; Lower Enable
     
     SWAP    R22         ; Swap nibbles in output register
     ANDI    R22,0XF0    ; Clear lower nibble
@@ -525,9 +525,9 @@ READ_STATUS_HI:
     ; Get low nibble of address counter
 READ_STATUS_LOW:
 
-    SBI     CNTRL,E     ; Raise Enable
-    IN      R16,DATA    ; Copy intput pin values
-    CBI     CNTRL,E     ; Lower Enable
+    SBI     _SFR_IO_ADDR(CNTRL),E     ; Raise Enable
+    IN      R16,_SFR_IO_ADDR(DATA)    ; Copy intput pin values
+    CBI     _SFR_IO_ADDR(CNTRL),E     ; Lower Enable
 
     ANDI    R16,0X0F    ; Isolate low nibble
     OR      R22,R16     ; Move low nibble to output register
