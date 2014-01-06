@@ -1,9 +1,7 @@
-/*
- * avr_lcd.asm
- *
- *  Created: 6/5/2013 7:24:35 PM
- *   Author: Allen Baker
- */
+; avr_lcd.S
+;
+;  Created: 6/5/2013 7:24:35 PM
+;   Author: Allen Baker
 
 #include <avr/io.h>
 
@@ -100,20 +98,42 @@
 ; END CONSTANTS
 
 
-; Set Reset Interrupt vector
-;.ORG   0x0000
-;
-;   RJMP    RESET
+; BEGIN GLOBALS
+
+
+    .section .data
+
+
+; END GLOBALS
 
 
 ; BEGIN MAIN PROGRAM
 
 
-;.ORG   0x0034
-
     .section .text
-    .global main
 
+; BEGIN PROGRAM CONSTANTS
+
+HIWLD_ADDR:
+    .byte   CH_H_UP
+    .byte   CH_E_LOW
+    .byte   CH_L_LOW
+    .byte   CH_L_LOW
+    .byte   CH_O_LOW
+    .byte   CH_COMMA
+    .byte   CH_SPACE
+    .byte   CH_W_UP
+    .byte   CH_O_LOW
+    .byte   CH_R_LOW
+    .byte   CH_L_LOW
+    .byte   CH_D_LOW
+    .byte   CH_EXCL
+    .byte   0x00 
+
+; END PROGRAM CONSTANTS
+
+
+    .global main
 main:
 
 ; Setup Port B
@@ -252,55 +272,10 @@ LCD_ENTRY:
     
     ; Write characters for "Hello, World!" to display
 LCD_WRITE:
-    
-    ; Write "H"
-    LDI     R23,CH_H_UP
-    RCALL   WRITE_DATA
-    
-    ; Write "e"
-    LDI     R23,CH_E_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write "ll"
-    LDI     R23,CH_L_LOW
-    RCALL   WRITE_DATA
-    RCALL   WRITE_DATA
-    
-    ; Write "o"
-    LDI     R23,CH_O_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write ","
-    LDI     R23,CH_COMMA
-    RCALL   WRITE_DATA
-    
-    ; Write " "
-    LDI     R23,CH_SPACE
-    RCALL   WRITE_DATA
-    
-    ; Write "W"
-    LDI     R23,CH_W_UP
-    RCALL   WRITE_DATA
-    
-    ; Write "o"
-    LDI     R23,CH_O_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write "r"
-    LDI     R23,CH_R_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write "l"
-    LDI     R23,CH_L_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write "d"
-    LDI     R23,CH_D_LOW
-    RCALL   WRITE_DATA
-    
-    ; Write "!"
-    LDI     R23,CH_EXCL
-    RCALL   WRITE_DATA
+
+    LDI     R30,lo8(HIWLD_ADDR)
+    LDI     R31,hi8(HIWLD_ADDR)
+    RCALL   WRITE_STR
 
 
 LOOP:
@@ -539,6 +514,27 @@ READ_STATUS_END:
     CBR     R22,0X80    ; Always clear flag in address counter output
 
     RET ; Return from READ_STATUS
+
+
+; Name: WRITE_STR
+; Descr: Write null-terminated string of characters
+;  to LCD display
+; Inputs:
+;  R30: Low byte of starting address of string
+;   (must be program memory)
+;  R31: High byte of starting address of string
+;   (must be program memory)
+WRITE_STR:
+
+    LPM     R23,Z+          ; Load next character of string
+    TST     R23             ; AND with all 1s
+    BREQ    WRITE_STR_END   ; If null terminator, return
+    RCALL   WRITE_DATA      ; Else, write to LCD
+    RJMP    WRITE_STR       ; Loop back to WRITE_STR
+
+WRITE_STR_END:
+
+    RET ; Return from WRITE_STR
 
 
 ; Name: WAIT
