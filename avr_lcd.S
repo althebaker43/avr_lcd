@@ -39,11 +39,6 @@
 ; Lowercase character offset
 .SET        CH_LOWCASE_OFSET,-0x30
 
-; Punctuation
-.SET        CH_SPACE,0x20
-.SET        CH_EXCL,0x21
-.SET        CH_COMMA,0x2C
-
 
 ; END CONSTANTS
 
@@ -66,6 +61,7 @@ CH_PUNCT:
     .byte   ' ',    0x20
     .byte   '!',    0x21
     .byte   ',',    0x2C
+    .byte   0x00
 
 ; END PROGRAM CONSTANTS
 
@@ -79,8 +75,7 @@ CH_PUNCT:
     .global LCD_INIT
 LCD_INIT:
 
-; Save registers
-
+    ; Save registers
     PUSH    R16
     PUSH    R23
     PUSH    R24
@@ -88,21 +83,21 @@ LCD_INIT:
     PUSH    R26
     PUSH    R27
 
-; Setup Port B
+    ; Setup Port B
 
     ; Set low nibble of Port B to output
     ; All outputs are initially low
     LDI     R16,0x0F
     OUT     _SFR_IO_ADDR(DDRB),R16
 
-; Setup Port C
+    ; Setup Port C
 
     ; Set low nibble of Port C to output
     ; All outputs are initially low
     LDI     R16,0x0F
     OUT     _SFR_IO_ADDR(DDRC),R16
 
-; Configure Timer 0
+    ; Configure Timer 0
     
     ; Disable power reduction for Timer 0
     ; PRR: Power Reduction Register
@@ -127,7 +122,7 @@ LCD_INIT:
     CLR     R16             ; Clear R16
     ST      X,R16           ; Clear TIMSK0
 
-; Configure LCD module
+    ; Configure LCD module
 
     ; Drive all data lines low
     LDI     R16,0XF0
@@ -217,8 +212,7 @@ LCD_INIT:
     LDI     R24,WAIT_128US
     RCALL   WAIT
 
-; Restore registers
-
+    ; Restore registers
     POP     R27
     POP     R26
     POP     R25
@@ -240,13 +234,78 @@ LCD_INIT:
     .global LCD_WRITE
 LCD_WRITE:
 
+    ; Save registers
+    PUSH    R23
+    PUSH    R24
+    PUSH    R25
+
     LPM     R23,Z+          ; Load next character of string
     TST     R23             ; AND with all 1s
     BREQ    LCD_WRITE_END   ; If null terminator, return
-    RCALL   WRITE_DATA      ; Else, write to LCD
-    RJMP    LCD_WRITE       ; Loop back to WRITE_STR
+
+    CPI     R23,'z'         ; If greater than 'z'
+    BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
+
+    CPI     R23,'a'         ; Else if greater than 'a'
+    BRPL    LCD_WRITE_LOW   ; Branch to lowercase characters
+
+    CPI     R23,'Z'         ; Else if greater than 'Z'
+    BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
+
+    CPI     R23,'A'         ; Else if greater than 'A'
+    BRPL    LCD_WRITE_UP    ; Branch to uppercase characters
+
+    RJMP    LCD_WRITE_PUNCT ; Jump to punctuation
+
+LCD_WRITE_LOW:
+
+    LDI     R24,CH_LOWCASE_OFSET
+    ADD     R23,R24
+    RCALL   WRITE_DATA
+    RJMP    LCD_WRITE
+
+LCD_WRITE_UP:
+
+    ADD     R23,CH_UPCASE_OFSET
+    RCALL   WRITE_DATA
+    RJMP    LCD_WRITE
+
+LCD_WRITE_PUNCT:
+
+    ; Save Z register contents
+    PUSH    ZL
+    PUSH    ZH
+
+    LDI     ZL,lo8(CH_PUNCT)
+    LDI     ZH,hi8(CH_PUNCT)
+
+LCD_WRITE_PUNCT_LOOP:
+
+    LPM     R24,Z+              ; Load next ASCII character
+    LPM     R25,Z+              ; Load next LCD character
+    TST     R24                 ; If null terminator loaded
+    BREQ    LCD_WRITE_PUNCT_END ; Branch to end
+
+    CP      R23,R24                 ; If does notequals current character
+    BRNE    LCD_WRITE_PUNCT_LOOP    ; Loop back to LCD_WRITE_PUNCT_LOOP
+
+    MOV     R23,R25     ; Else, move LCD character into R23
+    RCALL   WRITE_DATA  ; Write character to LCD module
+
+LCD_WRITE_PUNCT_END:
+
+    ; Restore Z register contents
+    POP     ZH
+    POP     ZL
+
+    RJMP    LCD_WRITE
 
 LCD_WRITE_END:
+
+    ; Restore registers
+    POP     R25
+    POP     R24
+    POP     R23
 
     RET ; Return from LCD_WRITE
 

@@ -27,11 +27,11 @@ HIWLD_ADDR:
     .global main
 main:
 
-    rcall   LCD_INIT    ; Initialize LCD module
+    rcall   LCD_INIT          ; Initialize LCD module
 
     ; Write "Hello, World!" to LCD display
-    ldi     R30,lo8(HIWLD_ADDR)
-    ldi     R31,hi8(HIWLD_ADDR)
+    ldi     ZL,lo8(HIWLD_ADDR)
+    ldi     ZH,hi8(HIWLD_ADDR)
     rcall   LCD_WRITE
 
 LOOP:
