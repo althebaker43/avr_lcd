@@ -33,61 +33,11 @@
 
 ; Character codes
 
-; Uppercase
-.SET        CH_A_UP,0x41
-.SET        CH_B_UP,0x42
-.SET        CH_C_UP,0x43
-.SET        CH_D_UP,0x44
-.SET        CH_E_UP,0x45
-.SET        CH_F_UP,0x46
-.SET        CH_G_UP,0x47
-.SET        CH_H_UP,0x48
-.SET        CH_I_UP,0x49
-.SET        CH_J_UP,0x4A
-.SET        CH_K_UP,0x4B
-.SET        CH_L_UP,0x4C
-.SET        CH_M_UP,0x4D
-.SET        CH_N_UP,0x4E
-.SET        CH_O_UP,0x4F
-.SET        CH_P_UP,0x50
-.SET        CH_Q_UP,0x51
-.SET        CH_R_UP,0x52
-.SET        CH_S_UP,0x53
-.SET        CH_T_UP,0x54
-.SET        CH_U_UP,0x55
-.SET        CH_V_UP,0x56
-.SET        CH_W_UP,0x57
-.SET        CH_X_UP,0x58
-.SET        CH_Y_UP,0x59
-.SET        CH_Z_UP,0x5A
+; Uppercase character offset
+.SET        CH_UPCASE_OFSET,0
 
-; Lowercase
-.SET        CH_A_LOW,0x61
-.SET        CH_B_LOW,0x62
-.SET        CH_C_LOW,0x63
-.SET        CH_D_LOW,0x64
-.SET        CH_E_LOW,0x65
-.SET        CH_F_LOW,0x66
-.SET        CH_G_LOW,0x67
-.SET        CH_H_LOW,0x68
-.SET        CH_I_LOW,0x69
-.SET        CH_J_LOW,0x6A
-.SET        CH_K_LOW,0x6B
-.SET        CH_L_LOW,0x6C
-.SET        CH_M_LOW,0x6D
-.SET        CH_N_LOW,0x6E
-.SET        CH_O_LOW,0x6F
-.SET        CH_P_LOW,0x70
-.SET        CH_Q_LOW,0x71
-.SET        CH_R_LOW,0x72
-.SET        CH_S_LOW,0x73
-.SET        CH_T_LOW,0x74
-.SET        CH_U_LOW,0x75
-.SET        CH_V_LOW,0x76
-.SET        CH_W_LOW,0x77
-.SET        CH_X_LOW,0x78
-.SET        CH_Y_LOW,0x79
-.SET        CH_Z_LOW,0x7A
+; Lowercase character offset
+.SET        CH_LOWCASE_OFSET,-0x30
 
 ; Punctuation
 .SET        CH_SPACE,0x20
@@ -107,34 +57,36 @@
 ; END GLOBALS
 
 
-; BEGIN MAIN PROGRAM
-
-
     .section .text
 
 ; BEGIN PROGRAM CONSTANTS
 
-HIWLD_ADDR:
-    .byte   CH_H_UP
-    .byte   CH_E_LOW
-    .byte   CH_L_LOW
-    .byte   CH_L_LOW
-    .byte   CH_O_LOW
-    .byte   CH_COMMA
-    .byte   CH_SPACE
-    .byte   CH_W_UP
-    .byte   CH_O_LOW
-    .byte   CH_R_LOW
-    .byte   CH_L_LOW
-    .byte   CH_D_LOW
-    .byte   CH_EXCL
-    .byte   0x00 
+; Punctuation table
+CH_PUNCT:
+    .byte   ' ',    0x20
+    .byte   '!',    0x21
+    .byte   ',',    0x2C
 
 ; END PROGRAM CONSTANTS
 
 
-    .global main
-main:
+;BEGIN FUNCTIONS
+
+; Name: LCD_INIT
+; Descr: Initializes the LCD module
+; Inputs:
+; Outputs:
+    .global LCD_INIT
+LCD_INIT:
+
+; Save registers
+
+    PUSH    R16
+    PUSH    R23
+    PUSH    R24
+    PUSH    R25
+    PUSH    R26
+    PUSH    R27
 
 ; Setup Port B
 
@@ -144,7 +96,6 @@ main:
     OUT     _SFR_IO_ADDR(DDRB),R16
 
 ; Setup Port C
-CONFIG_PORTC:
 
     ; Set low nibble of Port C to output
     ; All outputs are initially low
@@ -152,7 +103,6 @@ CONFIG_PORTC:
     OUT     _SFR_IO_ADDR(DDRC),R16
 
 ; Configure Timer 0
-CONFIG_T0:
     
     ; Disable power reduction for Timer 0
     ; PRR: Power Reduction Register
@@ -166,10 +116,10 @@ CONFIG_T0:
     ; Disable waveform generation
     ; Set clock source to internal I/O clock
     ; Prescaler set to divide freq. by 64
-    CLR     R16         ; Clear R16
-    OUT     _SFR_IO_ADDR(TCCR0A),R16  ; Clear TCCR0A
-    LDI     R16,0X03    ; Set [0] and [1] in R16
-    OUT     _SFR_IO_ADDR(TCCR0B),R16  ; Set [0] and [1] in TCCR0B
+    CLR     R16                         ; Clear R16
+    OUT     _SFR_IO_ADDR(TCCR0A),R16    ; Clear TCCR0A
+    LDI     R16,0X03                    ; Set [0] and [1] in R16
+    OUT     _SFR_IO_ADDR(TCCR0B),R16    ; Set [0] and [1] in TCCR0B
 
     ; Disable all Timer 0 interrupts
     LDI     XL,lo8(TIMSK0)  ; Load low byte of TIMSK0 address into XL
@@ -177,7 +127,7 @@ CONFIG_T0:
     CLR     R16             ; Clear R16
     ST      X,R16           ; Clear TIMSK0
 
-CONFIG_LCD:
+; Configure LCD module
 
     ; Drive all data lines low
     LDI     R16,0XF0
@@ -242,8 +192,7 @@ CONFIG_LCD:
     ; Turn on LCD:
     ;  Cursor on
     ;  Cursor blinking
-LCD_ON:
-    LDI     R23,0X0F        ; Display on command
+    LDI     R23,0X0F    ; Display on command
     RCALL   WRITE_CMD
     
     ; Delay for 128 us
@@ -251,8 +200,7 @@ LCD_ON:
     RCALL   WAIT
     
     ; Display clear
-LCD_CLEAR:
-    LDI     R23,0X01        ; Clear display command
+    LDI     R23,0X01    ; Clear display command
     RCALL   WRITE_CMD
 
     ; Delay for 2 ms
@@ -262,30 +210,45 @@ LCD_CLEAR:
     ; Entry mode set:
     ;  Increment cursor
     ;  Shift display
-LCD_ENTRY:
-    LDI     R23,0X06        ; Entry mode command
+    LDI     R23,0X06    ; Entry mode command
     RCALL   WRITE_CMD
 
     ; Delay for 128 us
     LDI     R24,WAIT_128US
     RCALL   WAIT
-    
-    ; Write characters for "Hello, World!" to display
+
+; Restore registers
+
+    POP     R27
+    POP     R26
+    POP     R25
+    POP     R24
+    POP     R23
+    POP     R16
+
+    RET ; Return from LCD_INIT
+
+
+; Name: LCD_WRITE
+; Descr: Write null-terminated string of characters
+;  to LCD display
+; Inputs:
+;  R30: Low byte of starting address of string
+;   (must be program memory)
+;  R31: High byte of starting address of string
+;   (must be program memory)
+    .global LCD_WRITE
 LCD_WRITE:
 
-    LDI     R30,lo8(HIWLD_ADDR)
-    LDI     R31,hi8(HIWLD_ADDR)
-    RCALL   WRITE_STR
+    LPM     R23,Z+          ; Load next character of string
+    TST     R23             ; AND with all 1s
+    BREQ    LCD_WRITE_END   ; If null terminator, return
+    RCALL   WRITE_DATA      ; Else, write to LCD
+    RJMP    LCD_WRITE       ; Loop back to WRITE_STR
 
+LCD_WRITE_END:
 
-LOOP:
-
-    RJMP    LOOP    ; Loop back to LOOP
-
-
-; END OF MAIN PROGRAM
-
-; BEGIN FUNCTIONS
+    RET ; Return from LCD_WRITE
 
 
 ; Name: WRITE_CMD
@@ -299,6 +262,10 @@ LOOP:
 ; Outputs:
 ;  R25[3] - Time-out occurred (0 = no, 1 = yes)
 WRITE_CMD:
+
+    ; Save registers
+    PUSH    R16
+    PUSH    R17
 
     ; If requested, wait on BF
     SBRC    R25,2               ; Check wait-busy argument
@@ -364,7 +331,7 @@ WRITE_CMD_4BIT:
 
     ; Move low byte of command to output port
     MOV     R16,R23
-    ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
+    ORI     R16,0XF0                ; Keep pull-ups enabled on input pins
     OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
@@ -377,15 +344,23 @@ WRITE_CMD_END:
     LDI     R16,0XF0
     OUT     _SFR_IO_ADDR(DATA),R16
 
+    ; Restore registers
+    POP     R17
+    POP     R16
+
     RET ; Return from WRITE_CMD
 
 
 ; Name: WRITE_DATA
 ; Descr: Writes data to the LCD data RAM,
-;   Always waits for 128 us afterwards
+;  always waits for 128 us afterwards
 ; Inputs:
 ;  R23 - Data to write
 WRITE_DATA:
+
+    ; Save registers
+    PUSH    R16
+    PUSH    R17
     
     ; Set first four pins on PORTC to output
     ; The rest are inputs
@@ -398,13 +373,13 @@ WRITE_DATA:
     OR      R17,R16
     OUT     _SFR_IO_ADDR(DATA),R17
 
-    CBI     _SFR_IO_ADDR(CNTRL),RW    ; Clear Read/Write
-    SBI     _SFR_IO_ADDR(CNTRL),RS    ; Set Register Select
+    CBI     _SFR_IO_ADDR(CNTRL),RW  ; Clear Read/Write
+    SBI     _SFR_IO_ADDR(CNTRL),RS  ; Set Register Select
 
     ; Move high byte of data to output port
     MOV     R16,R23
     SWAP    R16
-    ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
+    ORI     R16,0XF0                ; Keep pull-ups enabled on input pins
     OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
@@ -413,7 +388,7 @@ WRITE_DATA:
 
     ; Move low byte of command to output port
     MOV     R16,R23
-    ORI     R16,0XF0    ; Keep pull-ups enabled on input pins
+    ORI     R16,0XF0                ; Keep pull-ups enabled on input pins
     OUT     _SFR_IO_ADDR(DATA),R16
 
     ; Pulse Enable to send
@@ -428,6 +403,10 @@ WRITE_DATA:
     LDI     R24,WAIT_128US
     RCALL   WAIT
 
+    ; Restore registers
+    POP     R17
+    POP     R16
+
     RET ; Return from WRITE_DATA
 
 
@@ -439,13 +418,17 @@ WRITE_DATA:
 ;  R25[3] - Return value (0 = ready, 1 = timed-out)
 WAIT_BUSY:
 
-    CBR     R25,0X08        ; Set return value to ready
+    ; Save registers
+    PUSH    R16
+    PUSH    R17
+
+    CBR     R25,0X08    ; Set return value to ready
 
     OUT     _SFR_IO_ADDR(OCR0A),R24     ; Store interval constant 
                                         ;   in output compare register
     SBI     _SFR_IO_ADDR(TIFR0),OCF0A   ; Clear output compare flag
-    CLR     R16             ; Clear R16
-    OUT     _SFR_IO_ADDR(TCNT0),R17       ; Reset Timer 0
+    CLR     R16                         ; Clear R16
+    OUT     _SFR_IO_ADDR(TCNT0),R17     ; Reset Timer 0
 
 READ_BUSY:
 
@@ -455,10 +438,14 @@ READ_BUSY:
     RJMP    WAIT_BUSY_END   ; If cleared, branch to end
 
     SBIS    _SFR_IO_ADDR(TIFR0),OCF0A   ; Check timer compare flag
-    RJMP    READ_BUSY       ; If cleared, loop back
-    SBR     R25,0X08        ; Else, set return value to timed-out
+    RJMP    READ_BUSY                   ; If cleared, loop back
+    SBR     R25,0X08                    ; Else, set return value to timed-out
 
 WAIT_BUSY_END:
+
+    ; Restore registers
+    POP     R17
+    POP     R16
 
     RET ; Return from WAIT_BUSY
 
@@ -474,6 +461,9 @@ WAIT_BUSY_END:
 ;  R25[3]: Busy flag (0 = ready, 1 = busy)
 ;  R22[6:0]: Address counter contents
 READ_STATUS:
+
+    ; Save registers
+    PUSH    R16
 
     ; Set data pins to input (pull-ups disabled)
     CLR     R16
@@ -513,28 +503,10 @@ READ_STATUS_END:
     CBR     R25,0X08    ; If cleared, output ready
     CBR     R22,0X80    ; Always clear flag in address counter output
 
+    ; Restore registers
+    POP     R16
+
     RET ; Return from READ_STATUS
-
-
-; Name: WRITE_STR
-; Descr: Write null-terminated string of characters
-;  to LCD display
-; Inputs:
-;  R30: Low byte of starting address of string
-;   (must be program memory)
-;  R31: High byte of starting address of string
-;   (must be program memory)
-WRITE_STR:
-
-    LPM     R23,Z+          ; Load next character of string
-    TST     R23             ; AND with all 1s
-    BREQ    WRITE_STR_END   ; If null terminator, return
-    RCALL   WRITE_DATA      ; Else, write to LCD
-    RJMP    WRITE_STR       ; Loop back to WRITE_STR
-
-WRITE_STR_END:
-
-    RET ; Return from WRITE_STR
 
 
 ; Name: WAIT
@@ -542,6 +514,9 @@ WRITE_STR_END:
 ; Inputs:
 ;  R24: Interval constant
 WAIT:
+
+    ; Save registers
+    PUSH    R16
 
     ; Store interval constant in output compare register
     OUT     _SFR_IO_ADDR(OCR0A),R24
@@ -558,15 +533,13 @@ WAIT_T0:
 
     SBIS    _SFR_IO_ADDR(TIFR0),OCF0A
     RJMP    WAIT_T0
+
+    ; Restore registers
+    POP     R16
     
-    ; Return
-    RET
+    RET ; Return from WAIT
 
 
 ; END FUNCTIONS
-
-    .global __vector_default
-__vector_default:
-    reti
 
     .end

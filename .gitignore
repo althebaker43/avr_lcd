@@ -1,4 +1,5 @@
 \#*
+.lib*
 *~
 *.swp
 *.pdf
@@ -7,6 +8,7 @@
 *.atsuo
 *.elf
 *.o
+*.a
 *.png
 *.eps
 *.bak
