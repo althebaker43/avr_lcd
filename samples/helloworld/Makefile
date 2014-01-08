@@ -6,7 +6,7 @@ PRG            = helloworld
 OBJ            = $(PRG).o
 MCU_TARGET     = atmega328p
 SIM_TARGET     = atmega328
-OPTIMIZE       = -O2
+OPTIMIZE       =
 
 DEFS           =
 LIBS           = -lavr_lcd -L../../
@@ -18,12 +18,13 @@ CC = avr-gcc
 # Override is only needed by avr-lib build system.
 
 ifdef SIM
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(SIM_TARGET) $(DEFS)
+override CFLAGS        = -Wall $(OPTIMIZE) -mmcu=$(SIM_TARGET) $(DEFS)
 else
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
+override CFLAGS        = -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
 endif
 
-override LDFLAGS       = -Wl,-Map,$(PROJ).map
+override LDFLAGS       = -Wl,-Map,$(PRG).map,--cref
+ASFLAGS = -Wa,-mno-wrap,--gstabs,-alms=$(PRG).lst
 
 OBJCOPY        = avr-objcopy
 OBJDUMP        = avr-objdump
@@ -36,11 +37,11 @@ ifdef SIM
 else
 	@echo "\nINFO: Generating hardware files.\n"
 endif
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # dependency:
 $(OBJ): $(PRG).S
-	$(CC) $(CFLAGS) -x assembler-with-cpp -c -o $@ $^
+	$(CC) $(CFLAGS) $(ASFLAGS) -x assembler-with-cpp -c -o $@ $^
 
 clean:
 	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak 

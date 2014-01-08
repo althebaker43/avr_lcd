@@ -72,6 +72,7 @@ CH_PUNCT:
 ; Descr: Initializes the LCD module
 ; Inputs:
 ; Outputs:
+    .align 2
     .global LCD_INIT
 LCD_INIT:
 
@@ -231,6 +232,7 @@ LCD_INIT:
 ;   (must be program memory)
 ;  R31: High byte of starting address of string
 ;   (must be program memory)
+    .align 2
     .global LCD_WRITE
 LCD_WRITE:
 
@@ -238,6 +240,8 @@ LCD_WRITE:
     PUSH    R23
     PUSH    R24
     PUSH    R25
+
+LCD_WRITE_CP:
 
     LPM     R23,Z+          ; Load next character of string
     TST     R23             ; AND with all 1s
@@ -262,13 +266,13 @@ LCD_WRITE_LOW:
     LDI     R24,CH_LOWCASE_OFSET
     ADD     R23,R24
     RCALL   WRITE_DATA
-    RJMP    LCD_WRITE
+    RJMP    LCD_WRITE_CP
 
 LCD_WRITE_UP:
 
     ADD     R23,CH_UPCASE_OFSET
     RCALL   WRITE_DATA
-    RJMP    LCD_WRITE
+    RJMP    LCD_WRITE_CP
 
 LCD_WRITE_PUNCT:
 
@@ -298,7 +302,7 @@ LCD_WRITE_PUNCT_END:
     POP     ZH
     POP     ZL
 
-    RJMP    LCD_WRITE
+    RJMP    LCD_WRITE_CP
 
 LCD_WRITE_END:
 

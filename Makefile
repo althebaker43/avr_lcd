@@ -7,7 +7,7 @@ LIB            = lib$(PROJ).a
 OBJ            = avr_lcd.o
 MCU_TARGET     = atmega328p
 SIM_TARGET     = atmega328
-OPTIMIZE       = -O2
+OPTIMIZE       =
 
 DEFS           =
 LIBS           =
@@ -22,12 +22,13 @@ AR = avr-ar
 # Override is only needed by avr-lib build system.
 
 ifdef SIM
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(SIM_TARGET) $(DEFS)
+override CFLAGS        = -Wall $(OPTIMIZE) -mmcu=$(SIM_TARGET) $(DEFS)
 else
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
+override CFLAGS        = -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
 endif
 
 override LDFLAGS       = -Wl,-Map,$(PROJ).map
+ASFLAGS = -Wa,-mno-wrap,--gstabs,-alms=$(PROJ).lst
 
 OBJCOPY        = avr-objcopy
 OBJDUMP        = avr-objdump
@@ -44,7 +45,7 @@ endif
 
 # dependency:
 avr_lcd.o: avr_lcd.S
-	$(CC) $(CFLAGS) -x assembler-with-cpp -c -o $@ $^
+	$(CC) $(CFLAGS) $(ASFLAGS) -x assembler-with-cpp -c -o $@ $^
 
 clean:
 	rm -rf *.o $(LIB) *.eps *.png *.pdf *.bak 
@@ -80,15 +81,15 @@ ehex:  $(PROJ)_eeprom.hex
 ebin:  $(PROJ)_eeprom.bin
 esrec: $(PROJ)_eeprom.srec
 
-%_eeprom.hex: lib%.a
+%_eeprom.hex: %.o
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 
-%_eeprom.srec: lib%.a
+%_eeprom.srec: %.o
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O srec $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 
-%_eeprom.bin: lib%.a
+%_eeprom.bin: %.o
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 

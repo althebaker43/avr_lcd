@@ -1,5 +1,7 @@
 #include <avr/io.h>
 
+.extern   LCD_INIT
+.extern   LCD_WRITE
 
 ; BEGIN CONSTANTS
 
