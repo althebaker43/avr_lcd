@@ -7,7 +7,6 @@
 
 ; BEGIN CONSTANTS
 
-
 ; Delay constants
 .SET        WAIT_64US,0
 .SET        WAIT_128US,1
@@ -31,26 +30,14 @@
 .SET        DB7,PORTC3
 .SET        BF,PORTC3
 
-; Character codes
-
-; Uppercase character offset
-.SET        CH_UPCASE_OFSET,0
-
-; Lowercase character offset
-.SET        CH_LOWCASE_OFSET,-0x30
-
-
 ; END CONSTANTS
 
 
 ; BEGIN GLOBALS
 
-
     .section .data
 
-
 ; END GLOBALS
-
 
     .section .text
 
@@ -251,26 +238,18 @@ LCD_WRITE_CP:
     BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
 
     CPI     R23,'a'         ; Else if greater than 'a'
-    BRPL    LCD_WRITE_LOW   ; Branch to lowercase characters
+    BRPL    LCD_WRITE_LTR   ; Branch to letters
 
     CPI     R23,'Z'         ; Else if greater than 'Z'
     BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
 
     CPI     R23,'A'         ; Else if greater than 'A'
-    BRPL    LCD_WRITE_UP    ; Branch to uppercase characters
+    BRPL    LCD_WRITE_LTR   ; Branch to letters
 
     RJMP    LCD_WRITE_PUNCT ; Jump to punctuation
 
-LCD_WRITE_LOW:
+LCD_WRITE_LTR:
 
-    LDI     R24,CH_LOWCASE_OFSET
-    ADD     R23,R24
-    RCALL   WRITE_DATA
-    RJMP    LCD_WRITE_CP
-
-LCD_WRITE_UP:
-
-    ADD     R23,CH_UPCASE_OFSET
     RCALL   WRITE_DATA
     RJMP    LCD_WRITE_CP
 

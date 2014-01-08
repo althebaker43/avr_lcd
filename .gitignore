@@ -18,5 +18,6 @@
 *.bin
 *.srec
 *.vcd
+tags
 atmel_studio/avr_lcd/Debug/
 atmel_studio/avr_lcd/Release/
