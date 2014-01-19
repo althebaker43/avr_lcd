@@ -34,7 +34,7 @@ main:
     ; Write "Hello, World!" to LCD display
     ldi     ZL,lo8(HIWLD_ADDR)
     ldi     ZH,hi8(HIWLD_ADDR)
-    rcall   LCD_WRITE
+    rcall   LCD_STR
 
 LOOP:
 

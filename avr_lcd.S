@@ -37,6 +37,12 @@
 
     .section .data
 
+prev_var_top:
+    .word   0x0000
+
+prev_var_btm:
+    .word   0x0000
+
 ; END GLOBALS
 
     .section .text
@@ -173,9 +179,9 @@ LCD_INIT:
     RCALL   WAIT
     
     ; Turn on LCD:
-    ;  Cursor on
-    ;  Cursor blinking
-    LDI     R23,0X0F    ; Display on command
+    ;  Cursor off
+    ;  Cursor not blinking
+    LDI     R23,0X0C    ; Display on command
     RCALL   WRITE_CMD
     
     ; Delay for 128 us
@@ -211,7 +217,7 @@ LCD_INIT:
     RET ; Return from LCD_INIT
 
 
-; Name: LCD_WRITE
+; Name: LCD_STR
 ; Descr: Write null-terminated string of characters
 ;  to LCD display
 ; Inputs:
@@ -220,40 +226,35 @@ LCD_INIT:
 ;  R31: High byte of starting address of string
 ;   (must be program memory)
     .align 2
-    .global LCD_WRITE
-LCD_WRITE:
+    .global LCD_STR
+LCD_STR:
 
     ; Save registers
     PUSH    R23
     PUSH    R24
     PUSH    R25
 
-LCD_WRITE_CP:
+LCD_STR_CP:
 
-    LPM     R23,Z+          ; Load next character of string
-    TST     R23             ; AND with all 1s
-    BREQ    LCD_WRITE_END   ; If null terminator, return
+    LPM     R23,Z+        ; Load next character of string
+    TST     R23           ; AND with all 1s
+    BREQ    LCD_STR_END   ; If null terminator, return
 
-    CPI     R23,'z'         ; If greater than 'z'
-    BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
+    CPI     R23,'z'       ; If greater than 'z'
+    BRPL    LCD_STR_LUT   ; Look up in table
 
-    CPI     R23,'a'         ; Else if greater than 'a'
-    BRPL    LCD_WRITE_LTR   ; Branch to letters
+    CPI     R23,'a'       ; Else if greater than 'a'
+    BRPL    LCD_STR_OUT   ; Write out directly
 
-    CPI     R23,'Z'         ; Else if greater than 'Z'
-    BRPL    LCD_WRITE_PUNCT ; Branch to punctuation
+    CPI     R23,'Z'       ; Else if greater than 'Z'
+    BRPL    LCD_STR_LUT   ; Look up in table
 
-    CPI     R23,'A'         ; Else if greater than 'A'
-    BRPL    LCD_WRITE_LTR   ; Branch to letters
+    CPI     R23,' '       ; Else if greater or equal to ' '
+    BRGE    LCD_STR_OUT   ; Write out directly
 
-    RJMP    LCD_WRITE_PUNCT ; Jump to punctuation
+    RJMP    LCD_STR_LUT   ; Look up in table
 
-LCD_WRITE_LTR:
-
-    RCALL   WRITE_DATA
-    RJMP    LCD_WRITE_CP
-
-LCD_WRITE_PUNCT:
+LCD_STR_PUNCT:
 
     ; Save Z register contents
     PUSH    ZL
@@ -262,36 +263,148 @@ LCD_WRITE_PUNCT:
     LDI     ZL,lo8(CH_PUNCT)
     LDI     ZH,hi8(CH_PUNCT)
 
-LCD_WRITE_PUNCT_LOOP:
+LCD_STR_LUT_LOOP:
 
-    LPM     R24,Z+              ; Load next ASCII character
-    LPM     R25,Z+              ; Load next LCD character
-    TST     R24                 ; If null terminator loaded
-    BREQ    LCD_WRITE_PUNCT_END ; Branch to end
+    LPM     R24,Z+          ; Load next ASCII character
+    LPM     R25,Z+          ; Load next LCD character
+    TST     R24             ; If null terminator loaded
+    BREQ    LCD_STR_LUT_END ; Branch to end
 
-    CP      R23,R24                 ; If does notequals current character
-    BRNE    LCD_WRITE_PUNCT_LOOP    ; Loop back to LCD_WRITE_PUNCT_LOOP
+    CP      R23,R24             ; If does notequals current character
+    BRNE    LCD_STR_LUT_LOOP    ; Loop back to LCD_STR_LUT_LOOP
 
     MOV     R23,R25     ; Else, move LCD character into R23
-    RCALL   WRITE_DATA  ; Write character to LCD module
 
-LCD_WRITE_PUNCT_END:
+LCD_STR_LUT_END:
 
     ; Restore Z register contents
     POP     ZH
     POP     ZL
 
-    RJMP    LCD_WRITE_CP
+LCD_STR_OUT:
 
-LCD_WRITE_END:
+    RCALL   WRITE_DATA  ; Write character to LCD module
+    RJMP    LCD_STR_CP
+
+LCD_STR_END:
 
     ; Restore registers
     POP     R25
     POP     R24
     POP     R23
 
-    RET ; Return from LCD_WRITE
+    RET ; Return from LCD_STR
 
+
+; Name: LCD_VAR
+; Descr: Displays a variable's value
+; Inputs:
+;  R25[0]: Display location (0 = top, 1 = bottom)
+;  R25[1]: Value format (0 = hex, 1 = decimal)
+;  R26: Low byte of variable's address
+;   (must be in .data)
+;  R27: High byte of variable's address
+;   (must be in .data)
+;  R30: Low byte of starting address of string
+;   (must be program memory)
+;  R31: High byte of starting address of string
+;   (must be program memory)
+    .align 2
+    .global LCD_VAR
+LCD_VAR:
+
+    ; Save registers
+    PUSH    R16
+    PUSH    R17
+    PUSH    R18
+    PUSH    XL
+    PUSH    XH
+
+    CLR     R16
+    SBRC    R25,0
+    RJMP    LCD_VAR_BTM
+
+LCD_VAR_TOP:
+
+    ; Set pointer to previous variable address
+    LDI     YL,lo8(prev_var_top)
+    LDI     YH,hi8(prev_var_top)
+
+    ; Set LCD address counter to top left
+    RCALL    SET_POS 
+    RJMP     LCD_VAR_CP
+
+LCD_VAR_BTM:
+    
+    ; Set pointer to previous variable address
+    LDI     YL,lo8(prev_var_btm)
+    LDI     YH,hi8(prev_var_btm)
+
+    ; Set LCD address counter to bottom left
+    LDI     R16,0x10
+    RCALL   SET_POS
+
+LCD_VAR_CP:
+    
+    ; Get previous variable address
+    LD      R17,X+
+    LD      R18,X
+
+    ; Compare with previous variable address
+    ;   If same, don't rewrite label
+    
+LCD_VAR_CP_LO:
+
+    ; Compare low bytes
+    CP      XL,R17
+    BRNE    LCD_VAR_LABEL
+
+LCD_VAR_CP_HI:
+
+    ; Compare high bytes
+    CP      XH,R18
+    BREQ    LCD_VAR_FMT
+
+LCD_VAR_LABEL:
+
+    ; Write out variable label
+    RCALL   LCD_STR
+
+LCD_VAR_FMT:
+
+    ; Determine value format
+    SBRS    R25,1
+    RJMP    LCD_VAR_VAL
+
+LCD_VAR_DEC:
+
+    ; Extract BCD digits from value
+
+LCD_VAR_VAL:
+
+    ; Write out variable value
+
+LCD_VAR_END:
+
+    ; Restore registers
+    POP     XH
+    POP     XL
+    POP     R18
+    POP     R17
+    POP     R16
+
+    RET ; Return from LCD_VAR
+
+
+; Name: SET_POS
+; Descr: Sets the cursors position on the LCD display
+; Inputs:
+;  R16[0:3]: Column selection
+;  R16[4]: Row selection (0 = top, 1 = bottom)
+SET_POS:
+
+    RET ; Return SET_POS
+    
 
 ; Name: WRITE_CMD
 ; Descr: Writes a command to the LCD display
