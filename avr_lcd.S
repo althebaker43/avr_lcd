@@ -15,6 +15,12 @@
 .SET        WAIT_5MS,78
 .SET        WAIT_15MS,234
 
+; Display position constants
+.SET    LCD_TOP_L,      0x00
+.SET    LCD_TOP_R,      0x0F
+.SET    LCD_BTM_L,      0x40
+.SET    LCD_BTM_R,      0x4F
+
 ; Control line definitions (for Port B)
 .SET        CNTRL,PORTB
 .SET        RS,PORTB0
@@ -225,6 +231,8 @@ LCD_INIT:
 ;   (must be program memory)
 ;  R31: High byte of starting address of string
 ;   (must be program memory)
+; Outputs:
+;  R15: Size of string (not incl. terminator)
     .align 2
     .global LCD_STR
 LCD_STR:
@@ -233,6 +241,8 @@ LCD_STR:
     PUSH    R23
     PUSH    R24
     PUSH    R25
+
+    CLR     R15
 
 LCD_STR_CP:
 
@@ -297,7 +307,7 @@ LCD_STR_END:
 
 
 ; Name: LCD_VAR
-; Descr: Displays a variable's value
+; Descr: Displays a variable's value (byte-sized)
 ; Inputs:
 ;  R25[0]: Display location (0 = top, 1 = bottom)
 ;  R25[1]: Value format (0 = hex, 1 = decimal)
@@ -305,9 +315,9 @@ LCD_STR_END:
 ;   (must be in .data)
 ;  R27: High byte of variable's address
 ;   (must be in .data)
-;  R30: Low byte of starting address of string
+;  R30: Low byte of starting address of label
 ;   (must be program memory)
-;  R31: High byte of starting address of string
+;  R31: High byte of starting address of label
 ;   (must be program memory)
     .align 2
     .global LCD_VAR
@@ -320,9 +330,8 @@ LCD_VAR:
     PUSH    XL
     PUSH    XH
 
-    CLR     R16
-    SBRC    R25,0
-    RJMP    LCD_VAR_BTM
+    SBRC    R25,0           ; If R25[0] is set
+    RJMP    LCD_VAR_BTM     ; Write to bottom row
 
 LCD_VAR_TOP:
 
@@ -331,8 +340,10 @@ LCD_VAR_TOP:
     LDI     YH,hi8(prev_var_top)
 
     ; Set LCD address counter to top left
-    RCALL    SET_POS 
-    RJMP     LCD_VAR_CP
+    LDI     R16,LCD_TOP_L
+    RCALL   SET_POS 
+    
+    RJMP    LCD_VAR_CP
 
 LCD_VAR_BTM:
     
@@ -341,7 +352,7 @@ LCD_VAR_BTM:
     LDI     YH,hi8(prev_var_btm)
 
     ; Set LCD address counter to bottom left
-    LDI     R16,0x10
+    LDI     R16,LCD_BTM_L
     RCALL   SET_POS
 
 LCD_VAR_CP:
@@ -400,8 +411,18 @@ LCD_VAR_END:
 ; Descr: Sets the cursors position on the LCD display
 ; Inputs:
 ;  R16[0:3]: Column selection
-;  R16[4]: Row selection (0 = top, 1 = bottom)
+;  R16[6]: Row selection (0 = top, 1 = bottom)
 SET_POS:
+
+    ; Save registers
+    PUSH    R23
+
+    LDI     R23,0x80    ; Load command
+    OR      R23,R16     ; Load display data RAM address
+    RCALL   WRITE_CMD
+
+    ; Restore registers
+    POP     R23
 
     RET ; Return SET_POS
     
