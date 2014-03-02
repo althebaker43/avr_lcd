@@ -31,17 +31,13 @@ OBJDUMP        = avr-objdump
 
 all: $(PRG).elf lst text eeprom
 
-$(PRG).elf: $(OBJ)
+$(PRG).elf: $(PRG).S
 ifdef SIM
 	@echo "\nINFO: Generating simulation files.\n"
 else
 	@echo "\nINFO: Generating hardware files.\n"
 endif
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-# dependency:
-$(OBJ): $(PRG).S
-	$(CC) $(CFLAGS) $(ASFLAGS) -x assembler-with-cpp -c -o $@ $^
 
 clean:
 	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak 

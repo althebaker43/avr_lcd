@@ -264,7 +264,7 @@ LCD_STR_CP:
 
     RJMP    LCD_STR_LUT   ; Look up in table
 
-LCD_STR_PUNCT:
+LCD_STR_LUT:
 
     ; Save Z register contents
     PUSH    ZL
