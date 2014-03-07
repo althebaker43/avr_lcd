@@ -21,6 +21,10 @@
 .SET    LCD_BTM_L,      0x40
 .SET    LCD_BTM_R,      0x4F
 
+; Entry auto-shift constants
+.SET    LCD_SHFT_R,     0x00
+.SET    LCD_SHFT_L,     0x01
+
 ; Control line definitions (for Port B)
 .SET        CNTRL,PORTB
 .SET        RS,PORTB0
@@ -43,6 +47,16 @@
 
     .section .data
 
+; Flag indicating successful initialization
+init_finished:
+    .byte   0x00
+
+; Time-out value for LCD communications
+time_out:
+    .byte   WAIT_2MS
+
+; For avoiding rewrite of labels in LCD_VAR
+
 prev_var_top:
     .word   0x0000
 
@@ -61,6 +75,26 @@ CH_PUNCT:
     .byte   '!',    0x21
     .byte   ',',    0x2C
     .byte   0x00
+
+; (Hex) Number table
+CH_NUM:
+    .byte   0x00,   '0'
+    .byte   0x01,   '1'
+    .byte   0x02,   '2'
+    .byte   0x03,   '3'
+    .byte   0x04,   '4'
+    .byte   0x05,   '5'
+    .byte   0x06,   '6'
+    .byte   0x07,   '7'
+    .byte   0x08,   '8'
+    .byte   0x09,   '9'
+    .byte   0x0A,   'A'
+    .byte   0x0B,   'B'
+    .byte   0x0C,   'C'
+    .byte   0x0D,   'D'
+    .byte   0x0E,   'E'
+    .byte   0x0F,   'F'
+    .byte   0x00,   0x00
 
 ; END PROGRAM CONSTANTS
 
@@ -208,9 +242,17 @@ LCD_INIT:
     LDI     R23,0X06    ; Entry mode command
     RCALL   WRITE_CMD
 
-    ; Delay for 128 us
-    LDI     R24,WAIT_128US
-    RCALL   WAIT
+    ; Set time-out value to 64us
+    LDI     XL,lo8(time_out)
+    LDI     XH,hi8(time_out)
+    LDI     R16,WAIT_64US
+    ST      X,R16
+
+    ; Set "init finished" flag
+    LDI     XL,lo8(init_finished)
+    LDI     XH,hi8(init_finished)
+    LDI     R16,0xFF
+    ST      X,R16
 
     ; Restore registers
     POP     R27
@@ -242,8 +284,6 @@ LCD_STR:
     PUSH    R24
     PUSH    R25
 
-    CLR     R15
-
 LCD_STR_CP:
 
     LPM     R23,Z+        ; Load next character of string
@@ -261,8 +301,6 @@ LCD_STR_CP:
 
     CPI     R23,' '       ; Else if greater or equal to ' '
     BRGE    LCD_STR_OUT   ; Write out directly
-
-    RJMP    LCD_STR_LUT   ; Look up in table
 
 LCD_STR_LUT:
 
@@ -306,6 +344,105 @@ LCD_STR_END:
     RET ; Return from LCD_STR
 
 
+; Name: LCD_VAL
+; Descr: Displays a byte-sized numerical value
+; Inputs:
+;  R25[1]: Value format (0 = hex, 1 = decimal)
+;  R26: Low byte of variable's address
+;   (must be in .data)
+;  R27: High byte of variable's address
+;   (must be in .data)
+LCD_VAL:
+
+    ; Save registers
+    PUSH    R16
+    PUSH    R21
+    PUSH    R22
+    PUSH    R23
+    PUSH    R24
+    PUSH    ZL
+    PUSH    ZH
+
+    SBRS    R25,1
+    RJMP    LCD_VAL_HEX
+
+LCD_VAL_DEC:
+
+    ; TODO: Implement decimal conversion
+
+    RJMP    LCD_VAL_END
+
+LCD_VAL_HEX:
+
+    ; Set auto-shifting to left
+    LDI     R16,LCD_SHFT_L
+    RCALL   SET_SHFT
+
+    ; Load value to write
+    LD      R21,X
+
+    ; Get low nibble
+    MOV     R22,R21
+    ANDI    R22,0x0F
+
+    ; Set Z pointer to number-char table
+    LDI     ZL,lo8(CH_NUM)
+    LDI     ZH,hi8(CH_NUM)
+
+    ; Look up in number table
+
+LCD_VAL_LUT_LO:
+
+    LPM     R24,Z+          ; Load number in R24
+    LPM     R23,Z+          ; Load character in R23
+    TST     R23             ; Check if character is null
+    BREQ    LCD_VAL_SHFTR   ; If so, terminate
+
+    CP      R22,R24         ; Compare numerical values
+    BRNE    LCD_VAL_LUT_LO  ; If not equal, loop again
+    RCALL   WRITE_DATA      ; Else, write character to display
+
+    ; Get high nibble
+    SWAP    R21
+    ANDI    R21,0x0F
+    
+    ; Reset Z-pointer
+    LDI     ZL,lo8(CH_NUM)
+    LDI     ZH,hi8(CH_NUM)
+
+    ; Look up in number table
+
+LCD_VAL_LUT_HI:
+
+    LPM     R24,Z+          ; Load number in R24
+    LPM     R23,Z+          ; Load character in R23
+    TST     R23             ; Check if character is null
+    BREQ    LCD_VAL_SHFTR   ; If so, terminate
+
+    CP      R21,R24         ; Compare numerical values
+    BRNE    LCD_VAL_LUT_HI  ; If not equal, loop again
+    RCALL   WRITE_DATA      ; Else, write character to display
+
+LCD_VAL_SHFTR:
+    
+    ; Set auto-shifting to right
+    LDI     R16,LCD_SHFT_R
+    RCALL   SET_SHFT
+
+LCD_VAL_END:
+
+    ; Restore registers
+    POP     ZH
+    POP     ZL
+    POP     R24
+    POP     R23
+    POP     R22
+    POP     R21
+    POP     R16
+
+    RET 
+
+
 ; Name: LCD_VAR
 ; Descr: Displays a variable's value (byte-sized)
 ; Inputs:
@@ -325,116 +462,102 @@ LCD_VAR:
 
     ; Save registers
     PUSH    R16
-    PUSH    R17
-    PUSH    R18
-    PUSH    XL
-    PUSH    XH
 
     SBRC    R25,0           ; If R25[0] is set
     RJMP    LCD_VAR_BTM     ; Write to bottom row
 
 LCD_VAR_TOP:
 
-    ; Set pointer to previous variable address
-    LDI     YL,lo8(prev_var_top)
-    LDI     YH,hi8(prev_var_top)
-
     ; Set LCD address counter to top left
     LDI     R16,LCD_TOP_L
     RCALL   SET_POS 
     
-    RJMP    LCD_VAR_CP
+    RJMP    LCD_VAR_LABEL
 
 LCD_VAR_BTM:
-    
-    ; Set pointer to previous variable address
-    LDI     YL,lo8(prev_var_btm)
-    LDI     YH,hi8(prev_var_btm)
 
     ; Set LCD address counter to bottom left
     LDI     R16,LCD_BTM_L
     RCALL   SET_POS
-
-LCD_VAR_CP:
-    
-    ; Get previous variable address
-    LD      R17,X+
-    LD      R18,X
-
-    ; Compare with previous variable address
-    ;   If same, don't rewrite label
-    
-LCD_VAR_CP_LO:
-
-    ; Compare low bytes
-    CP      XL,R17
-    BRNE    LCD_VAR_LABEL
-
-LCD_VAR_CP_HI:
-
-    ; Compare high bytes
-    CP      XH,R18
-    BREQ    LCD_VAR_FMT
 
 LCD_VAR_LABEL:
 
     ; Write out variable label
     RCALL   LCD_STR
 
-LCD_VAR_FMT:
-
-    ; Determine value format
-    SBRS    R25,1
-    RJMP    LCD_VAR_VAL
-
-LCD_VAR_DEC:
-
-    ; Extract BCD digits from value
-
 LCD_VAR_VAL:
 
+    ; Set cursor opposite of label
+    ORI     R16,0x0F
+    RCALL   SET_POS
+
     ; Write out variable value
+    RCALL   LCD_VAL
 
 LCD_VAR_END:
 
     ; Restore registers
-    POP     XH
-    POP     XL
-    POP     R18
-    POP     R17
     POP     R16
 
     RET ; Return from LCD_VAR
 
 
 ; Name: SET_POS
-; Descr: Sets the cursors position on the LCD display
+; Descr: Sets the cursors position on the LCD
 ; Inputs:
 ;  R16[0:3]: Column selection
 ;  R16[6]: Row selection (0 = top, 1 = bottom)
+    .align 2
+    .global SET_POS
 SET_POS:
 
     ; Save registers
     PUSH    R23
+    PUSH    R25
 
     LDI     R23,0x80    ; Load command
     OR      R23,R16     ; Load display data RAM address
-    RCALL   WRITE_CMD
+    CLR     R25
+    RCALL   WRITE_CMD   ; Write command to LCD
 
     ; Restore registers
+    POP     R25
     POP     R23
 
-    RET ; Return SET_POS
-    
+    RET ; Return from SET_POS
+
+
+; Name: SET_SHFT
+; Descr: Sets the entry auto-shifting mode of the LCD
+; Inputs:
+;  R16[0]: Shift selection (0 = right, 1 = left)
+SET_SHFT:
+
+    ; Save registers
+    PUSH    R23
+    PUSH    R24
+    PUSH    R25
+
+    LDI     R23,0x04    ; Load command
+    SBRS    R16,0       ; Check shift selection input
+    ORI     R23,0x02    ; If cleared, set command bit
+    CLR     R25
+    RCALL   WRITE_CMD   ; Write command to LCD
+
+    ; Restore registers
+    POP     R25
+    POP     R24
+    POP     R23
+
+    RET ; Return from SET_SHFT
+
 
 ; Name: WRITE_CMD
 ; Descr: Writes a command to the LCD display
 ; Inputs:
 ;  R23 - Command to write
-;  R24 - Time-out value
 ;  R25[0] - Bus width (ignored for now) (0 = 4-bit, 1 = 8-bit)
 ;  R25[1] - 4-bit setup mode? (0 = no, 1 = yes)
-;  R25[2] - Wait on Busy Flag? (0 = yes, 1 = no)
 ; Outputs:
 ;  R25[3] - Time-out occurred (0 = no, 1 = yes)
 WRITE_CMD:
@@ -442,13 +565,21 @@ WRITE_CMD:
     ; Save registers
     PUSH    R16
     PUSH    R17
+    PUSH    R25
+    PUSH    XL
+    PUSH    XH
 
-    ; If requested, wait on BF
-    SBRC    R25,2               ; Check wait-busy argument
-    RJMP    WRITE_CMD_DWIDTH    ; If set, jump to WRITE_CMD_DWIDTH
+    ; Check initialization flag
+    LDI     XL,lo8(init_finished)
+    LDI     XH,hi8(init_finished)
+    LD      R16,X
+    TST     R16
+    BREQ    WRITE_CMD_DWIDTH
+
+    ; If requested, wait on busy flag
     RCALL   WAIT_BUSY           ; Else, call WAIT_BUSY
     SBRC    R25,3               ; Check WAIT_BUSY return value
-    RET                         ; If set, return from WRITE_CMD
+    RJMP    WRITE_CMD_END       ; If set, return from WRITE_CMD
 
 WRITE_CMD_DWIDTH:
 
@@ -474,7 +605,7 @@ WRITE_CMD_8BIT:
     CLR     R16
     OUT     _SFR_IO_ADDR(DATA),R16
 
-    RET ; Return from WRITE_CMD
+    RJMP    WRITE_CMD_END   ; Branch to end
 
 WRITE_CMD_4BIT:
     
@@ -503,7 +634,7 @@ WRITE_CMD_4BIT:
     CBI     _SFR_IO_ADDR(CNTRL),E
 
     SBRC    R25,1           ; Check 4-bit setup mode flag
-    RJMP    WRITE_CMD_END   ; If set, jump to WRITE_CMD_END
+    RJMP    WRITE_CMD_LOWR  ; If set, jump to WRITE_CMD_LOWR
 
     ; Move low byte of command to output port
     MOV     R16,R23
@@ -514,13 +645,18 @@ WRITE_CMD_4BIT:
     SBI     _SFR_IO_ADDR(CNTRL),E
     CBI     _SFR_IO_ADDR(CNTRL),E
 
-WRITE_CMD_END:
+WRITE_CMD_LOWR:
 
     ; Drive data pins low
     LDI     R16,0XF0
     OUT     _SFR_IO_ADDR(DATA),R16
 
+WRITE_CMD_END:
+
     ; Restore registers
+    POP     XH
+    POP     XL
+    POP     R25
     POP     R17
     POP     R16
 
@@ -537,6 +673,23 @@ WRITE_DATA:
     ; Save registers
     PUSH    R16
     PUSH    R17
+    PUSH    R25
+    PUSH    XL
+    PUSH    XH
+
+    ; Check initialization flag
+    LDI     XL,lo8(init_finished)
+    LDI     XH,hi8(init_finished)
+    LD      R16,X
+    TST     R16
+    BREQ    WRITE_DATA_START
+
+    ; If requested, wait on BF
+    RCALL   WAIT_BUSY
+    SBRC    R25,3           ; Check WAIT_BUSY return value
+    RJMP    WRITE_DATA_END  ; If set, return from WRITE_DATA
+
+WRITE_DATA_START:
     
     ; Set first four pins on PORTC to output
     ; The rest are inputs
@@ -575,11 +728,18 @@ WRITE_DATA:
     LDI     R16,0XF0
     OUT     _SFR_IO_ADDR(DATA),R16
 
-    ; Wait for 128 us
-    LDI     R24,WAIT_128US
-    RCALL   WAIT
+    ; Set time-out value to 64us
+    LDI     XL,lo8(time_out)
+    LDI     XH,hi8(time_out)
+    LDI     R16,WAIT_64US
+    ST      X,R16
+
+WRITE_DATA_END:
 
     ; Restore registers
+    POP     XH
+    POP     XL
+    POP     R25
     POP     R17
     POP     R16
 
@@ -589,7 +749,7 @@ WRITE_DATA:
 ; Name: WAIT_BUSY
 ; Descr: Wait for busy flag
 ; Inputs:
-;  R24 - Timeout value
+;  time_out
 ; Output:
 ;  R25[3] - Return value (0 = ready, 1 = timed-out)
 WAIT_BUSY:
@@ -597,6 +757,14 @@ WAIT_BUSY:
     ; Save registers
     PUSH    R16
     PUSH    R17
+    PUSH    R24
+    PUSH    XL
+    PUSH    XH
+    
+    ; Load time-out value
+    LDI     XL,lo8(time_out)
+    LDI     XH,lo8(time_out)
+    LD      R24,X               ; Load time-out value
 
     CBR     R25,0X08    ; Set return value to ready
 
@@ -620,6 +788,9 @@ READ_BUSY:
 WAIT_BUSY_END:
 
     ; Restore registers
+    POP     XH
+    POP     XL
+    POP     R24
     POP     R17
     POP     R16
 

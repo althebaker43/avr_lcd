@@ -33,9 +33,13 @@ all: $(PRG).elf lst text eeprom
 
 $(PRG).elf: $(PRG).S
 ifdef SIM
-	@echo "\nINFO: Generating simulation files.\n"
+	@echo ""
+	@echo "INFO: Generating simulation files."
+	@echo ""
 else
-	@echo "\nINFO: Generating hardware files.\n"
+	@echo ""
+	@echo "INFO: Generating hardware files."
+	@echo ""
 endif
 	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 

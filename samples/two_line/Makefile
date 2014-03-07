@@ -2,22 +2,18 @@
 # Originated from AVR-Libc sample projects page
 # http://www.nongnu.org/avr-libc/examples/demo/Makefile
 
-PROJ           = avr_lcd
-LIB            = lib$(PROJ).a
-OBJ            = avr_lcd.o
+PRG            = two_line
+OBJ            = $(PRG).o
 MCU_TARGET     = atmega328p
 SIM_TARGET     = atmega328
 OPTIMIZE       =
 
 DEFS           =
-LIBS           =
-
-EXTRA_CLEAN_FILES       = *.hex *.bin *.srec
+LIBS           = -lavr_lcd -L../../
 
 # You should not have to change anything below here.
 
 CC = avr-gcc
-AR = avr-ar
 
 # Override is only needed by avr-lib build system.
 
@@ -27,15 +23,15 @@ else
 override CFLAGS        = -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
 endif
 
-override LDFLAGS       = -Wl,-Map,$(PROJ).map
-ASFLAGS = -Wa,-mno-wrap,--gstabs,-alms=$(PROJ).lst
+override LDFLAGS       = -Wl,-Map,$(PRG).map,--cref
+ASFLAGS = -Wa,-mno-wrap,--gstabs,-alms=$(PRG).lst
 
 OBJCOPY        = avr-objcopy
 OBJDUMP        = avr-objdump
 
-all: $(LIB) lst text eeprom
+all: $(PRG).elf lst text eeprom
 
-$(LIB): $(OBJ)
+$(PRG).elf: $(PRG).S
 ifdef SIM
 	@echo ""
 	@echo "INFO: Generating simulation files."
@@ -45,55 +41,51 @@ else
 	@echo "INFO: Generating hardware files."
 	@echo ""
 endif
-	avr-ar rcs $@ $^
-
-# dependency:
-avr_lcd.o: avr_lcd.S
-	$(CC) $(CFLAGS) $(ASFLAGS) -x assembler-with-cpp -c -o $@ $^
+	$(CC) $(CFLAGS) $(ASFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -rf *.o $(LIB) *.eps *.png *.pdf *.bak 
+	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak 
 	rm -rf *.lst *.map $(EXTRA_CLEAN_FILES)
 
-lst:  $(PROJ).lst
+lst:  $(PRG).lst
 
-%.lst: lib%.a
+%.lst: %.elf
 	$(OBJDUMP) -h -S $< > $@
 
 # Rules for building the .text rom images
 
 text: hex bin srec
 
-hex:  $(PROJ).hex
-bin:  $(PROJ).bin
-srec: $(PROJ).srec
+hex:  $(PRG).hex
+bin:  $(PRG).bin
+srec: $(PRG).srec
 
-%.hex: %.o
+%.hex: %.elf
 	$(OBJCOPY) -j .text -j .data -O ihex $< $@
 
-%.srec: %.o
+%.srec: %.elf
 	$(OBJCOPY) -j .text -j .data -O srec $< $@
 
-%.bin: %.o
+%.bin: %.elf
 	$(OBJCOPY) -j .text -j .data -O binary $< $@
 
 # Rules for building the .eeprom rom images
 
 eeprom: ehex ebin esrec
 
-ehex:  $(PROJ)_eeprom.hex
-ebin:  $(PROJ)_eeprom.bin
-esrec: $(PROJ)_eeprom.srec
+ehex:  $(PRG)_eeprom.hex
+ebin:  $(PRG)_eeprom.bin
+esrec: $(PRG)_eeprom.srec
 
-%_eeprom.hex: %.o
+%_eeprom.hex: %.elf
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 
-%_eeprom.srec: %.o
+%_eeprom.srec: %.elf
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O srec $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 
-%_eeprom.bin: %.o
+%_eeprom.bin: %.elf
 	$(OBJCOPY) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@ \
 	|| { echo empty $@ not generated; exit 0; }
 
@@ -101,12 +93,13 @@ esrec: $(PROJ)_eeprom.srec
 # by the casual user.
 
 FIG2DEV                 = fig2dev
+EXTRA_CLEAN_FILES       = *.hex *.bin *.srec
 
 dox: eps png pdf
 
-eps: $(PROJ).eps
-png: $(PROJ).png
-pdf: $(PROJ).pdf
+eps: $(PRG).eps
+png: $(PRG).png
+pdf: $(PRG).pdf
 
 %.eps: %.fig
 	$(FIG2DEV) -L eps $< $@
