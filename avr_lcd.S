@@ -28,8 +28,8 @@
 ; Control line definitions (for Port B)
 .SET        CNTRL,PORTB
 .SET        RS,PORTB0
-.SET        RW,PORTB1
-.SET        E,PORTB2
+.SET        RW,PORTB6
+.SET        E,PORTB7
 .SET        LCD_FAIL,PORTB3
 
 ; Data line definitions (for Port C)
@@ -119,9 +119,9 @@ LCD_INIT:
 
     ; Setup Port B
 
-    ; Set low nibble of Port B to output
+    ; Set control bits of Port B to output
     ; All outputs are initially low
-    LDI     R16,0x0F
+    LDI     R16,0xC1
     OUT     _SFR_IO_ADDR(DDRB),R16
 
     ; Setup Port C
@@ -166,7 +166,7 @@ LCD_INIT:
 
     ; Drive all control lines low (except for LCD_FAIL)
     IN      R16,_SFR_IO_ADDR(CNTRL)
-    ANDI    R16,0XF8
+    ANDI    R16,0X3E
     OUT     _SFR_IO_ADDR(CNTRL),R16
 
     ; Delay for >40ms after power-up
